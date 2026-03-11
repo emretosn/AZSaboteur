@@ -29,7 +29,7 @@ from saboteur.utils.output import (
 
 app = typer.Typer(
     name="saboteur",
-    help="AZSaboteur — Dynamic Azure CTF Challenge Platform",
+    help="AZSaboteur — Dynamic Azure Cloud Attack Lab Generator",
     no_args_is_help=True,
 )
 
