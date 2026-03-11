@@ -1,0 +1,57 @@
+- id: WEB-SSRF
+  name: "SSRF to IMDS Token Theft"
+  category: web
+  description: "Exploit SSRF in a web app to reach Azure IMDS (169.254.169.254) and steal a managed identity token"
+  requires:
+    - network_access
+  provides:
+    - managed_identity_token
+  terraform_module: modules/web-ssrf
+  ansible_role: roles/vulnerable-flask-app
+  tags:
+    - ssrf
+    - imds
+    - entry_point
+
+- id: WEB-SQLI
+  name: "SQL Injection Credential Dump"
+  category: web
+  description: "Exploit SQL injection in a web form to dump credentials or connection strings from a database"
+  requires:
+    - network_access
+  provides:
+    - sql_credentials
+  terraform_module: modules/web-sqli
+  ansible_role: roles/vulnerable-sqli-app
+  tags:
+    - sqli
+    - entry_point
+
+- id: WEB-CMDI
+  name: "Command Injection"
+  category: web
+  description: "Exploit command injection in an API endpoint to read environment variables containing secrets"
+  requires:
+    - network_access
+  provides:
+    - env_secrets
+  terraform_module: modules/web-cmdi
+  ansible_role: roles/vulnerable-cmdi-app
+  tags:
+    - cmdi
+    - entry_point
+
+- id: WEB-GITEXPOSE
+  name: "Exposed .git Directory"
+  category: web
+  description: "Download source code from an exposed .git directory containing hardcoded secrets"
+  requires:
+    - network_access
+  provides:
+    - app_secret
+  terraform_module: modules/web-gitexpose
+  ansible_role: roles/vulnerable-git-app
+  tags:
+    - git
+    - secret_leak
+    - entry_point

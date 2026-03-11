@@ -1,0 +1,55 @@
+- id: CMP-IMDS
+  name: "Managed Identity Token via IMDS"
+  category: compute
+  description: "Query the IMDS endpoint from a compromised VM to obtain a managed identity OAuth token"
+  requires:
+    - vm_shell
+  provides:
+    - managed_identity_token
+  terraform_module: modules/vm-with-identity
+  ansible_role: roles/vm-imds
+  tags:
+    - imds
+    - managed_identity
+
+- id: CMP-RUNCOMMAND
+  name: "VM Run Command Abuse"
+  category: compute
+  description: "Execute commands on a VM via the Azure API using stolen credentials"
+  requires:
+    - full_access
+  provides:
+    - vm_shell
+  terraform_module: modules/vm-with-identity
+  ansible_role: roles/vm-runcommand
+  tags:
+    - lateral_movement
+    - run_command
+
+- id: CMP-FUNC-ENV
+  name: "Function App Environment Secrets"
+  category: compute
+  description: "Read environment variables from a Function App containing storage keys or SP credentials"
+  requires:
+    - sql_credentials
+  provides:
+    - sp_credentials
+  terraform_module: modules/function-app-env
+  ansible_role: roles/function-app-env
+  tags:
+    - serverless
+    - env_secrets
+
+- id: CMP-AUTOMATION
+  name: "Automation Account Runbook Abuse"
+  category: compute
+  description: "Modify or execute a runbook that runs as a high-privilege managed identity"
+  requires:
+    - sp_credentials
+  provides:
+    - vm_shell
+  terraform_module: modules/automation-account
+  ansible_role: roles/automation-runbook
+  tags:
+    - automation
+    - runbook

@@ -1,0 +1,28 @@
+- id: NET-NSG-OPEN
+  name: "Open NSG Rule"
+  category: networking
+  description: "Access internal services through a misconfigured NSG allowing all inbound traffic"
+  requires:
+    - network_access
+  provides:
+    - internal_network_access
+  terraform_module: modules/nsg-open
+  ansible_role: roles/nsg-open
+  tags:
+    - nsg
+    - entry_point
+
+- id: NET-MGMT-EXPOSED
+  name: "Exposed Management Port"
+  category: networking
+  description: "Access a VM through an exposed RDP/SSH port using discovered credentials"
+  requires:
+    - network_access
+  provides:
+    - vm_shell
+  terraform_module: modules/mgmt-exposed
+  ansible_role: roles/mgmt-exposed
+  tags:
+    - rdp
+    - ssh
+    - entry_point

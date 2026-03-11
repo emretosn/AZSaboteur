@@ -1,0 +1,27 @@
+- id: IAM-OVERPERM-SP
+  name: "Over-privileged Service Principal"
+  category: identity
+  description: "Use a discovered Service Principal credential that has Owner on a subscription to escalate privileges"
+  requires:
+    - sp_credentials
+  provides:
+    - full_access
+  terraform_module: modules/overperm-sp
+  ansible_role: roles/overperm-sp
+  tags:
+    - rbac
+    - privilege_escalation
+
+- id: IAM-APPREG-SECRET
+  name: "App Registration with Leaked Secret"
+  category: identity
+  description: "Authenticate as an App Registration using a leaked client secret to access its API permissions"
+  requires:
+    - app_secret
+  provides:
+    - sp_credentials
+  terraform_module: modules/appreg-secret
+  ansible_role: roles/appreg-secret
+  tags:
+    - app_registration
+    - secret_leak
