@@ -1,0 +1,269 @@
+"""CLI commands for AZSaboteur."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Optional
+
+import typer
+from rich.console import Console
+
+from saboteur.config import DeploymentState, StateManager
+from saboteur.deploy.terraform import TerraformRunner
+from saboteur.modules.base import ModuleCategory
+from saboteur.modules.catalog import load_catalog
+from saboteur.scenario.engine import Scenario, ScenarioConfig, ScenarioEngine
+from saboteur.scenario.validator import FlagValidator
+from saboteur.utils.output import (
+    console as out,
+    print_banner,
+    print_chain_table,
+    print_error,
+    print_info,
+    print_mission_briefing,
+    print_success,
+    print_warning,
+)
+
+app = typer.Typer(
+    name="saboteur",
+    help="AZSaboteur — Dynamic Azure CTF Challenge Platform",
+    no_args_is_help=True,
+)
+
+MODULES_DIR = Path(__file__).resolve().parent.parent / "modules"
+
+
+def _load_engine(seed: int | None = None) -> ScenarioEngine:
+    catalog = load_catalog(MODULES_DIR)
+    if len(catalog) == 0:
+        print_error("No vulnerability modules found. Add YAML definitions to modules/")
+        raise typer.Exit(1)
+    return ScenarioEngine(catalog, seed=seed)
+
+
+@app.command()
+def generate(
+    chain_length: int = typer.Option(3, "--chain-length", "-n", help="Number of steps in the attack chain"),
+    categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories: web,identity,compute,storage,networking"),
+    region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
+    seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed for reproducibility"),
+    output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path (JSON)"),
+) -> None:
+    """Generate a scenario without deploying (dry run)."""
+    print_banner()
+
+    cat_list = _parse_categories(categories)
+    config = ScenarioConfig(
+        chain_length=chain_length,
+        categories=cat_list,
+        region=region,
+        seed=seed,
+    )
+
+    engine = _load_engine(seed)
+    scenario = engine.generate(config)
+
+    chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
+    print_chain_table(chain_data)
+    print_info(f"Scenario ID: {scenario.scenario_id}")
+
+    if output_file:
+        data = scenario.to_terraform_vars()
+        data["graph"] = scenario.graph.to_dict()
+        with open(output_file, "w") as f:
+            json.dump(data, f, indent=2)
+        print_success(f"Scenario written to {output_file}")
+
+
+@app.command()
+def deploy(
+    chain_length: int = typer.Option(3, "--chain-length", "-n", help="Number of steps in the attack chain"),
+    categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
+    region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
+    seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
+    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
+) -> None:
+    """Generate and deploy a scenario to Azure."""
+    print_banner()
+
+    cat_list = _parse_categories(categories)
+    config = ScenarioConfig(
+        chain_length=chain_length,
+        categories=cat_list,
+        region=region,
+        seed=seed,
+    )
+
+    engine = _load_engine(seed)
+    scenario = engine.generate(config)
+
+    chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
+    print_chain_table(chain_data)
+
+    if not auto_approve:
+        proceed = typer.confirm("Proceed with deployment?")
+        if not proceed:
+            raise typer.Abort()
+
+    tf = TerraformRunner()
+    var_file = tf.write_var_file(scenario.to_terraform_vars())
+
+    if not tf.init():
+        raise typer.Exit(1)
+    if not tf.apply(var_file=var_file):
+        raise typer.Exit(1)
+
+    state = StateManager()
+    from datetime import datetime, timezone
+
+    state.add(
+        DeploymentState(
+            scenario_id=scenario.scenario_id,
+            region=region,
+            chain=[m.id for m in [scenario.graph.get_module(mid) for mid in scenario.graph.topo_order()]],
+            flags=scenario.flags,
+            status="deployed",
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+    )
+
+    briefing = scenario.player_briefing()
+    print_mission_briefing(
+        target=briefing["target"],
+        objective=briefing["objective"],
+        first_hint=briefing.get("first_hint", "Look for the entry point."),
+    )
+
+
+@app.command()
+def destroy(
+    instance: str = typer.Argument(..., help="Scenario ID to destroy"),
+    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
+) -> None:
+    """Tear down a deployed scenario."""
+    state = StateManager()
+    deployment = state.get(instance)
+    if not deployment:
+        print_error(f"No deployment found with ID: {instance}")
+        raise typer.Exit(1)
+
+    if not auto_approve:
+        proceed = typer.confirm(f"Destroy deployment {instance}?")
+        if not proceed:
+            raise typer.Abort()
+
+    tf = TerraformRunner()
+    if tf.destroy(auto_approve=True):
+        state.remove(instance)
+        print_success(f"Deployment {instance} destroyed")
+    else:
+        print_error("Destroy failed")
+        raise typer.Exit(1)
+
+
+@app.command()
+def status() -> None:
+    """Show active deployments."""
+    state = StateManager()
+    deployments = state.active
+    if not deployments:
+        print_info("No active deployments")
+        return
+
+    from rich.table import Table
+
+    table = Table(title="Active Deployments")
+    table.add_column("Scenario ID", style="cyan")
+    table.add_column("Region", style="white")
+    table.add_column("Chain", style="yellow")
+    table.add_column("Created", style="dim")
+    for dep in deployments:
+        table.add_row(
+            dep.scenario_id,
+            dep.region,
+            " → ".join(dep.chain),
+            dep.created_at,
+        )
+    out.print(table)
+
+
+@app.command()
+def validate(
+    flag: str = typer.Argument(..., help="Flag string to validate"),
+    instance: Optional[str] = typer.Option(None, "--instance", "-i", help="Scenario ID"),
+) -> None:
+    """Check if a flag string is correct."""
+    state = StateManager()
+
+    if instance:
+        deployment = state.get(instance)
+        if not deployment:
+            print_error(f"No deployment found: {instance}")
+            raise typer.Exit(1)
+        deployments = [deployment]
+    else:
+        deployments = state.active
+
+    for dep in deployments:
+        validator = FlagValidator(dep.flags)
+        result = validator.validate(flag)
+        if result.correct:
+            print_success(result.message)
+            return
+
+    print_error("Incorrect flag. Keep trying!")
+
+
+@app.command("list-modules")
+def list_modules(
+    category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category"),
+) -> None:
+    """Show all available vulnerability modules."""
+    catalog = load_catalog(MODULES_DIR)
+    modules = catalog.all
+
+    if category:
+        try:
+            cat = ModuleCategory(category)
+            modules = [m for m in modules if m.category == cat]
+        except ValueError:
+            print_error(f"Unknown category: {category}. Valid: {', '.join(c.value for c in ModuleCategory)}")
+            raise typer.Exit(1)
+
+    if not modules:
+        print_info("No modules found")
+        return
+
+    from rich.table import Table
+
+    table = Table(title="Vulnerability Modules")
+    table.add_column("ID", style="cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Category", style="yellow")
+    table.add_column("Requires", style="dim")
+    table.add_column("Provides", style="green")
+    for mod in modules:
+        table.add_row(
+            mod.id,
+            mod.name,
+            mod.category.value,
+            ", ".join(mod.requires),
+            ", ".join(mod.provides),
+        )
+    out.print(table)
+
+
+def _parse_categories(categories: str | None) -> list[ModuleCategory] | None:
+    if not categories:
+        return None
+    result = []
+    for c in categories.split(","):
+        c = c.strip().lower()
+        try:
+            result.append(ModuleCategory(c))
+        except ValueError:
+            print_warning(f"Unknown category '{c}', skipping")
+    return result or None

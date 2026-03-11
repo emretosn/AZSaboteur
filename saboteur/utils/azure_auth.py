@@ -1,0 +1,68 @@
+"""Azure authentication helpers."""
+
+from __future__ import annotations
+
+import subprocess
+import json
+
+
+def check_azure_cli() -> bool:
+    """Check if the Azure CLI is installed and logged in."""
+    try:
+        result = subprocess.run(
+            ["az", "account", "show"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def get_subscription_id() -> str | None:
+    """Get the current Azure subscription ID."""
+    try:
+        result = subprocess.run(
+            ["az", "account", "show", "--query", "id", "-o", "tsv"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def get_tenant_id() -> str | None:
+    """Get the current Azure tenant ID."""
+    try:
+        result = subprocess.run(
+            ["az", "account", "show", "--query", "tenantId", "-o", "tsv"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def get_account_info() -> dict | None:
+    """Get full Azure account info."""
+    try:
+        result = subprocess.run(
+            ["az", "account", "show", "-o", "json"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        pass
+    return None

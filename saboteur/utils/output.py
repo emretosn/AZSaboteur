@@ -1,0 +1,80 @@
+"""Rich terminal output helpers."""
+
+from __future__ import annotations
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.theme import Theme
+
+THEME = Theme(
+    {
+        "info": "cyan",
+        "success": "bold green",
+        "warning": "bold yellow",
+        "error": "bold red",
+        "flag": "bold magenta",
+    }
+)
+
+console = Console(theme=THEME)
+
+BANNER = r"""
+
+             )   (
+   (      ( /(   )\ )          )          )
+   )\     )\()) (()/(    )  ( /(       ( /(   (    (   (
+((((_)(  ((_)\   /(_))( /(  )\())  (   )\()) ))\  ))\  )(
+ )\ _ )\  _((_) (_))  )(_))((_)\   )\ (_))/ /((_)/((_)(()\
+ (_)_\(_)|_  /  / __|((_)_ | |(_) ((_)| |_ (_)) (_))(  ((_)
+  / _ \   / /   \__ \/ _` || '_ \/ _ \|  _|/ -_)| || || '_|
+ /_/ \_\ /___|  |___/\__,_||_.__/\___/ \__|\___| \_,_||_|
+
+
+  Azure Cloud Dynamic Attack Lab Generator
+"""
+
+# Could add more styling
+def print_banner() -> None:
+    console.print(BANNER, style="bold cyan")
+
+
+def print_success(message: str) -> None:
+    console.print(f"{message}", style="success")
+
+
+def print_error(message: str) -> None:
+    console.print(f"{message}", style="error")
+
+
+def print_warning(message: str) -> None:
+    console.print(f"{message}", style="warning")
+
+
+def print_info(message: str) -> None:
+    console.print(f"{message}", style="info")
+
+
+def print_flag(flag: str, step: int | None = None) -> None:
+    prefix = f"Step {step}: " if step is not None else ""
+    console.print(f"{prefix}{flag}", style="flag")
+
+
+def print_mission_briefing(target: str, objective: str, first_hint: str) -> None:
+    content = (
+        f"[bold]Target:[/bold]     {target}\n"
+        f"[bold]Objective:[/bold]  {objective}\n"
+        f"[bold]First Hint:[/bold] {first_hint}"
+    )
+    console.print(Panel(content, title="YOUR MISSION BRIEFING", border_style="bold yellow"))
+
+
+def print_chain_table(chain: list[dict]) -> None:
+    table = Table(title="Attack Chain", show_lines=True)
+    table.add_column("Step", style="bold", width=6)
+    table.add_column("Module", style="cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Category", style="yellow")
+    for i, mod in enumerate(chain, 1):
+        table.add_row(str(i), mod["id"], mod["name"], mod["category"])
+    console.print(table)
