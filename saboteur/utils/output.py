@@ -34,9 +34,8 @@ BANNER = r"""
   Azure Cloud Dynamic Attack Lab Generator
 """
 
-# Could add more styling
 def print_banner() -> None:
-    console.print(BANNER, style="bold cyan")
+    console.print(BANNER, style="bold #0099ff", highlight=False)
 
 
 def print_success(message: str) -> None:
