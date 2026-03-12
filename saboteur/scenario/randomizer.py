@@ -23,7 +23,7 @@ class Randomizer:
         return secrets.token_hex(length // 2 + 1)[:length]
 
     def flag_string(self) -> str:
-        return f"AZS_F_{self._hex(12)}"
+        return f"AZS_F{{{self._hex(12)}}}"
 
     def scenario_id(self) -> str:
         return f"AZSaboteur-{self._hex(8)}"
