@@ -60,11 +60,11 @@ def print_flag(flag: str, step: int | None = None) -> None:
     console.print(f"{prefix}{flag}", style="flag")
 
 
-def print_mission_briefing(target: str, objective: str, first_hint: str) -> None:
+def print_mission_briefing(target: str, objective: str, connection_info: str) -> None:
     content = (
-        f"[bold]Target:[/bold]     {target}\n"
-        f"[bold]Objective:[/bold]  {objective}\n"
-        f"[bold]First Hint:[/bold] {first_hint}"
+        f"[bold]Target:[/bold]      {target}\n"
+        f"[bold]Objective:[/bold]   {objective}\n"
+        f"[bold]Connect:[/bold]     {connection_info}"
     )
     console.print(Panel(content, title="YOUR MISSION BRIEFING", border_style="bold yellow"))
 

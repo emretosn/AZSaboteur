@@ -19,6 +19,7 @@ class ScenarioConfig:
     chain_length: int = 3
     categories: list[ModuleCategory] | None = None
     region: str = "westeurope"
+    subscription_id: str = ""
     seed: int | None = None
 
 
@@ -32,6 +33,7 @@ class Scenario:
     flags: dict[int, str]
     credentials: dict[str, str]
     resource_names: dict[str, str]
+    kali_credentials: dict[str, str]
 
     def to_terraform_vars(self) -> dict[str, Any]:
         """Convert to a scenario.auto.tfvars.json structure."""
@@ -54,6 +56,9 @@ class Scenario:
         return {
             "scenario_id": self.scenario_id,
             "region": self.config.region,
+            "subscription_id": self.config.subscription_id,
+            "kali_admin_username": self.kali_credentials["username"],
+            "kali_admin_password": self.kali_credentials["password"],
             "chain": chain_configs,
             "credentials": self.credentials,
             "flags": {str(k): v for k, v in self.flags.items()},
@@ -94,6 +99,11 @@ class ScenarioEngine:
 
         graph = ScenarioGraph.from_chain(chain)
 
+        kali_credentials = {
+            "username": "kali",
+            "password": randomizer._password(),
+        }
+
         return Scenario(
             scenario_id=scenario_id,
             config=config,
@@ -101,6 +111,7 @@ class ScenarioEngine:
             flags=flags,
             credentials=credentials,
             resource_names=resource_names,
+            kali_credentials=kali_credentials,
         )
 
     def _build_chain(self, config: ScenarioConfig) -> list[VulnModule]:

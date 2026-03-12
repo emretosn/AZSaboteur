@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import json
-import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
 
 from saboteur.config import DeploymentState, StateManager
 from saboteur.deploy.terraform import TerraformRunner
 from saboteur.modules.base import ModuleCategory
 from saboteur.modules.catalog import load_catalog
-from saboteur.scenario.engine import Scenario, ScenarioConfig, ScenarioEngine
+from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
+from saboteur.utils.azure_auth import get_subscription_id
 from saboteur.utils.output import (
     console as out,
     print_banner,
@@ -85,15 +85,22 @@ def deploy(
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
     auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
+    subscription_id: Optional[str] = typer.Option(None, "--subscription", help="Azure subscription ID (auto-detected from az cli if omitted)"),
 ) -> None:
     """Generate and deploy a scenario to Azure."""
     print_banner()
+
+    sub_id = subscription_id or get_subscription_id()
+    if not sub_id:
+        print_error("No Azure subscription found. Run 'az login' or pass --subscription.")
+        raise typer.Exit(1)
 
     cat_list = _parse_categories(categories)
     config = ScenarioConfig(
         chain_length=chain_length,
         categories=cat_list,
         region=region,
+        subscription_id=sub_id,
         seed=seed,
     )
 
@@ -102,6 +109,7 @@ def deploy(
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
     print_chain_table(chain_data)
+    print_info(f"Scenario ID: {scenario.scenario_id}")
 
     if not auto_approve:
         proceed = typer.confirm("Proceed with deployment?")
@@ -116,25 +124,28 @@ def deploy(
     if not tf.apply(var_file=var_file):
         raise typer.Exit(1)
 
-    state = StateManager()
-    from datetime import datetime, timezone
+    tf_outputs = tf.output()
+    kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
 
+    state = StateManager()
     state.add(
         DeploymentState(
             scenario_id=scenario.scenario_id,
             region=region,
-            chain=[m.id for m in [scenario.graph.get_module(mid) for mid in scenario.graph.topo_order()]],
+            chain=[scenario.graph.get_module(mid).id for mid in scenario.graph.topo_order()],
             flags=scenario.flags,
             status="deployed",
             created_at=datetime.now(timezone.utc).isoformat(),
         )
     )
 
-    briefing = scenario.player_briefing()
+    kali_user = scenario.kali_credentials["username"]
+    kali_pass = scenario.kali_credentials["password"]
+    print_success("Deployment complete!")
     print_mission_briefing(
-        target=briefing["target"],
-        objective=briefing["objective"],
-        first_hint=briefing.get("first_hint", "Look for the entry point."),
+        target=f"{kali_ip} (Kali box)",
+        objective="Scan the network from the Kali box, exploit the chain, and find the flags.",
+        connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
     )
 
 
