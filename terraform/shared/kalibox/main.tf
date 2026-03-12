@@ -81,12 +81,12 @@ resource "azurerm_linux_virtual_machine" "this" {
   source_image_reference {
     publisher = "kali-linux"
     offer     = "kali"
-    sku       = "kali-2025-1"
+    sku       = "kali-2025-2"
     version   = "latest"
   }
 
   plan {
-    name      = "kali-2025-1"
+    name      = "kali-2025-2"
     publisher = "kali-linux"
     product   = "kali"
   }

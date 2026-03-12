@@ -31,3 +31,21 @@ variable "kali_vm_size" {
   type        = string
   default     = "Standard_B2ms"
 }
+
+variable "chain" {
+  description = "Attack chain module configuration (passed from scenario engine)"
+  type        = any
+  default     = []
+}
+
+variable "credentials" {
+  description = "Generated credentials for the scenario"
+  type        = map(string)
+  default     = {}
+}
+
+variable "flags" {
+  description = "Generated flags for the scenario"
+  type        = map(string)
+  default     = {}
+}
