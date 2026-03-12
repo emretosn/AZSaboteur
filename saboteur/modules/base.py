@@ -27,7 +27,6 @@ class VulnModule:
     description: str = ""
     terraform_module: str = ""
     ansible_role: str = ""
-    estimated_cost_per_hour: float = 0.0
     tags: list[str] = field(default_factory=list)
 
     @property
@@ -49,7 +48,6 @@ class VulnModule:
             "description": self.description,
             "terraform_module": self.terraform_module,
             "ansible_role": self.ansible_role,
-            "estimated_cost_per_hour": self.estimated_cost_per_hour,
             "tags": self.tags,
         }
 
@@ -64,6 +62,5 @@ class VulnModule:
             description=data.get("description", ""),
             terraform_module=data.get("terraform_module", ""),
             ansible_role=data.get("ansible_role", ""),
-            estimated_cost_per_hour=data.get("estimated_cost_per_hour", 0.0),
             tags=data.get("tags", []),
         )
