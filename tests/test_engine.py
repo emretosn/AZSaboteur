@@ -26,7 +26,7 @@ class TestScenarioEngine:
         config = ScenarioConfig(chain_length=3, seed=42)
         scenario = engine.generate(config)
         for flag in scenario.flags.values():
-            assert flag.startswith("AZS_F_")
+            assert flag.startswith("AZS_F{")
 
     def test_deterministic_with_seed(self):
         config = ScenarioConfig(chain_length=3, seed=123)
