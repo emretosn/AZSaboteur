@@ -66,3 +66,23 @@ def get_account_info() -> dict | None:
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
         pass
     return None
+
+
+def accept_marketplace_terms(publisher: str, offer: str, plan: str) -> bool:
+    """Accept Azure Marketplace image terms. Idempotent — safe to call if already accepted."""
+    try:
+        result = subprocess.run(
+            ["az", "vm", "image", "terms", "accept",
+             "--publisher", publisher, "--offer", offer, "--plan", plan],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def accept_kali_terms() -> bool:
+    """Accept Kali Linux marketplace terms."""
+    return accept_marketplace_terms("kali-linux", "kali", "kali-2025-2")

@@ -15,7 +15,7 @@ from saboteur.modules.base import ModuleCategory
 from saboteur.modules.catalog import load_catalog
 from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
-from saboteur.utils.azure_auth import get_subscription_id
+from saboteur.utils.azure_auth import accept_kali_terms, get_subscription_id
 from saboteur.utils.output import (
     console as out,
     print_banner,
@@ -115,6 +115,10 @@ def deploy(
         proceed = typer.confirm("Proceed with deployment?")
         if not proceed:
             raise typer.Abort()
+
+    if not accept_kali_terms():
+        print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
+        raise typer.Exit(1)
 
     tf = TerraformRunner()
     var_file = tf.write_var_file(scenario.to_terraform_vars())
