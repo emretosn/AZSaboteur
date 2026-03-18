@@ -104,7 +104,7 @@ class TerraformRunner:
             print_info("Running: terraform init")
             result = self._run(["init", "-input=false", "-no-color"])
         else:
-            with console.status("Initializing Terraform...", spinner="dots"):
+            with console.status("[bold blue]Initializing Terraform...", spinner="dots", spinner_style="blue"):
                 result = self._run(["init", "-input=false", "-no-color"])
         if result.returncode == 0:
             print_success("Terraform initialized")
@@ -116,7 +116,7 @@ class TerraformRunner:
         args = ["plan", "-input=false", "-no-color", "-compact-warnings"]
         if var_file:
             args.append(f"-var-file={var_file}")
-        with console.status("Planning infrastructure...", spinner="dots"):
+        with console.status("[bold blue]Planning infrastructure...", spinner="dots", spinner_style="blue"):
             result = self._run(args)
         return result.returncode == 0
 
@@ -130,7 +130,7 @@ class TerraformRunner:
             print_info("Running: terraform apply")
             result = self._run(args)
         else:
-            with console.status("Deploying infrastructure...", spinner="dots"):
+            with console.status("[bold blue]Deploying infrastructure...", spinner="dots", spinner_style="blue"):
                 result = self._run(args)
         if result.returncode == 0:
             print_success("Infrastructure deployed")
@@ -148,7 +148,7 @@ class TerraformRunner:
             print_info("Running: terraform destroy")
             result = self._run(args)
         else:
-            with console.status("Tearing down infrastructure...", spinner="dots"):
+            with console.status("[bold blue]Tearing down infrastructure...", spinner="dots", spinner_style="blue"):
                 result = self._run(args)
         if result.returncode == 0:
             self.clean_chain_tf()

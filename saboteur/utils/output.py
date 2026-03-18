@@ -51,7 +51,7 @@ def print_warning(message: str) -> None:
 
 
 def print_info(message: str) -> None:
-    console.print(f"{message}", style="info")
+    console.print(f"{message}", style="info", highlight=False)
 
 
 def print_flag(flag: str, step: int | None = None) -> None:
