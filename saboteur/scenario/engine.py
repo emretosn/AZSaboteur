@@ -115,29 +115,54 @@ class ScenarioEngine:
         )
 
     def _build_chain(self, config: ScenarioConfig) -> list[VulnModule]:
-        """Build a linear attack chain by greedily extending from an entry point."""
+        """Build a random attack chain of exactly ``chain_length`` steps.
+
+        Uses DFS with backtracking over randomly-shuffled candidates so each
+        run (with a different seed) produces a different chain.  Raises
+        ``ValueError`` only when no chain of the requested length exists at all.
+        """
         entry_points = self.catalog.entry_points(categories=config.categories)
         if not entry_points:
             raise ValueError("No entry point modules available for the given filters.")
 
-        chain: list[VulnModule] = [self.rng.choice(entry_points)]
+        # Randomise entry point order so different seeds give different chains
+        self.rng.shuffle(entry_points)
 
-        for _ in range(config.chain_length - 1):
-            current = chain[-1]
-            candidates = [
-                m
-                for m in self.catalog.followers(current)
-                if m.id not in {c.id for c in chain}
-            ]
+        for entry in entry_points:
+            result = self._extend_chain([entry], config)
+            if len(result) >= config.chain_length:
+                return result
 
-            if config.categories:
-                filtered = [m for m in candidates if m.category in config.categories]
-                if filtered:
-                    candidates = filtered
+        raise ValueError(
+            f"Cannot build a chain of length {config.chain_length} "
+            f"with the available modules and category filters. "
+            f"Try a shorter chain or broader categories."
+        )
 
-            if not candidates:
-                break
+    def _extend_chain(
+        self, chain: list[VulnModule], config: ScenarioConfig
+    ) -> list[VulnModule]:
+        """Recursively extend the chain, backtracking on dead ends."""
+        if len(chain) >= config.chain_length:
+            return chain
 
-            chain.append(self.rng.choice(candidates))
+        current = chain[-1]
+        used_ids = {c.id for c in chain}
+        candidates = [
+            m for m in self.catalog.followers(current) if m.id not in used_ids
+        ]
+
+        if config.categories:
+            filtered = [m for m in candidates if m.category in config.categories]
+            if filtered:
+                candidates = filtered
+
+        # Randomise so backtracking explores a different order each run
+        self.rng.shuffle(candidates)
+
+        for candidate in candidates:
+            result = self._extend_chain(chain + [candidate], config)
+            if len(result) >= config.chain_length:
+                return result
 
         return chain
