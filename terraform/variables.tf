@@ -29,7 +29,7 @@ variable "kali_admin_password" {
 variable "kali_vm_size" {
   description = "VM size for the Kali box"
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_B2s_v2"
 }
 
 variable "chain" {

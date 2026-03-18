@@ -26,7 +26,7 @@ variable "admin_password" {
 
 variable "vm_size" {
   type    = string
-  default = "Standard_B2ms"
+  default = "Standard_B2s_v2"
 }
 
 resource "azurerm_public_ip" "this" {
