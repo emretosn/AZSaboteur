@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -22,11 +23,28 @@ def _sanitize_block_name(module_id: str) -> str:
 class TerraformRunner:
     """Wraps Terraform CLI commands for scenario deployment."""
 
-    def __init__(self, working_dir: Path | None = None) -> None:
+    def __init__(self, working_dir: Path | None = None, verbose: bool = False) -> None:
         self.working_dir = working_dir or TERRAFORM_DIR
+        self.verbose = verbose
 
     def _run(self, args: list[str]) -> subprocess.CompletedProcess:
         cmd = ["terraform", *args]
+        if self.verbose:
+            # Stream stdout/stderr to the terminal in real-time
+            result = subprocess.run(
+                cmd,
+                cwd=self.working_dir,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                text=True,
+            )
+            # stdout/stderr were streamed, not captured
+            return subprocess.CompletedProcess(
+                args=result.args,
+                returncode=result.returncode,
+                stdout="",
+                stderr="",
+            )
         return subprocess.run(
             cmd,
             cwd=self.working_dir,
@@ -82,8 +100,12 @@ class TerraformRunner:
             chain_tf.unlink()
 
     def init(self) -> bool:
-        with console.status("Initializing Terraform...", spinner="dots"):
+        if self.verbose:
+            print_info("Running: terraform init")
             result = self._run(["init", "-input=false", "-no-color"])
+        else:
+            with console.status("Initializing Terraform...", spinner="dots"):
+                result = self._run(["init", "-input=false", "-no-color"])
         if result.returncode == 0:
             print_success("Terraform initialized")
             return True
@@ -104,8 +126,12 @@ class TerraformRunner:
             args.append("-auto-approve")
         if var_file:
             args.append(f"-var-file={var_file}")
-        with console.status("Deploying infrastructure...", spinner="dots"):
+        if self.verbose:
+            print_info("Running: terraform apply")
             result = self._run(args)
+        else:
+            with console.status("Deploying infrastructure...", spinner="dots"):
+                result = self._run(args)
         if result.returncode == 0:
             print_success("Infrastructure deployed")
             return True
@@ -118,8 +144,12 @@ class TerraformRunner:
             args.append("-auto-approve")
         if var_file:
             args.append(f"-var-file={var_file}")
-        with console.status("Tearing down infrastructure...", spinner="dots"):
+        if self.verbose:
+            print_info("Running: terraform destroy")
             result = self._run(args)
+        else:
+            with console.status("Tearing down infrastructure...", spinner="dots"):
+                result = self._run(args)
         if result.returncode == 0:
             self.clean_chain_tf()
             print_success("All resources destroyed")

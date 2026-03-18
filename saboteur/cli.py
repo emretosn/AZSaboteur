@@ -86,6 +86,7 @@ def deploy(
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
     auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
     subscription_id: Optional[str] = typer.Option(None, "--subscription", help="Azure subscription ID (auto-detected from az cli if omitted)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
     """Generate and deploy a scenario to Azure."""
     print_banner()
@@ -120,7 +121,7 @@ def deploy(
         print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
         raise typer.Exit(1)
 
-    tf = TerraformRunner()
+    tf = TerraformRunner(verbose=verbose)
     tf_vars = scenario.to_terraform_vars()
     var_file = tf.write_var_file(tf_vars)
     tf.generate_chain_tf(tf_vars["chain"])
@@ -159,6 +160,7 @@ def deploy(
 def destroy(
     instance: str = typer.Argument(..., help="Scenario ID to destroy"),
     auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
     """Tear down a deployed scenario."""
     state = StateManager()
@@ -172,7 +174,7 @@ def destroy(
         if not proceed:
             raise typer.Abort()
 
-    tf = TerraformRunner()
+    tf = TerraformRunner(verbose=verbose)
     if tf.destroy(auto_approve=True):
         state.remove(instance)
         print_success(f"Deployment {instance} destroyed")
