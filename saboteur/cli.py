@@ -121,7 +121,9 @@ def deploy(
         raise typer.Exit(1)
 
     tf = TerraformRunner()
-    var_file = tf.write_var_file(scenario.to_terraform_vars())
+    tf_vars = scenario.to_terraform_vars()
+    var_file = tf.write_var_file(tf_vars)
+    tf.generate_chain_tf(tf_vars["chain"])
 
     if not tf.init():
         raise typer.Exit(1)
