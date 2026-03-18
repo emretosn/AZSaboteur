@@ -19,7 +19,9 @@ from saboteur.utils.azure_auth import accept_kali_terms, get_subscription_id
 from saboteur.utils.output import (
     console as out,
     print_banner,
+    print_chain_summary,
     print_chain_table,
+    print_chain_verbose,
     print_error,
     print_info,
     print_mission_briefing,
@@ -51,6 +53,7 @@ def generate(
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed for reproducibility"),
     output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path (JSON)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show full chain details"),
 ) -> None:
     """Generate a scenario without deploying (dry run)."""
     print_banner()
@@ -67,7 +70,10 @@ def generate(
     scenario = engine.generate(config)
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
-    print_chain_table(chain_data)
+    if verbose:
+        print_chain_verbose(chain_data)
+    else:
+        print_chain_summary(chain_data)
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
     if output_file:
@@ -109,7 +115,10 @@ def deploy(
     scenario = engine.generate(config)
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
-    print_chain_table(chain_data)
+    if verbose:
+        print_chain_verbose(chain_data)
+    else:
+        print_chain_summary(chain_data)
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
     if not auto_approve:

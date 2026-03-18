@@ -77,3 +77,25 @@ def print_chain_table(chain: list[dict]) -> None:
     for i, mod in enumerate(chain, 1):
         table.add_row(str(i), mod["id"], mod["name"], mod["category"])
     console.print(table)
+
+
+def print_chain_summary(chain: list[dict]) -> None:
+    """Brief chain overview showing only categories — safe for players to see."""
+    categories = " → ".join(mod["category"] for mod in chain)
+    console.print(
+        f"Attack chain: [bold]{len(chain)}[/bold] steps  [{categories}]",
+        style="info",
+    )
+
+
+def print_chain_verbose(chain: list[dict]) -> None:
+    """Detailed chain info for debugging — not for player eyes."""
+    console.print("[bold]Attack Chain Details:[/bold]")
+    for i, mod in enumerate(chain, 1):
+        console.print(
+            f"  Step {i}: [cyan]{mod['id']}[/cyan] — {mod['name']} "
+            f"[dim]({mod['category']})[/dim]"
+        )
+        if mod.get("description"):
+            console.print(f"          {mod['description']}", style="dim")
+    console.print()
