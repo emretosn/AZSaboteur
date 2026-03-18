@@ -31,7 +31,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   name                            = local.vm_name
   location                        = var.region
   resource_group_name             = var.resource_group_name
-  size                            = "Standard_B1s"
+  size                            = "Standard_B2ls_v2"
   admin_username                  = var.credentials["step_${var.step_index}_username"]
   admin_password                  = var.credentials["step_${var.step_index}_password"]
   disable_password_authentication = false
