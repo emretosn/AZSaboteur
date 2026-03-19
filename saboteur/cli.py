@@ -93,7 +93,6 @@ def deploy(
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
-    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
     subscription_id: Optional[str] = typer.Option(None, "--subscription", help="Azure subscription ID (auto-detected from az cli if omitted)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
@@ -126,11 +125,6 @@ def deploy(
     else:
         print_info("Infra-only mode — deploying Kali box and networking only")
     print_info(f"Scenario ID: {scenario.scenario_id}")
-
-    if not auto_approve:
-        proceed = typer.confirm("Proceed with deployment?")
-        if not proceed:
-            raise typer.Abort()
 
     if not accept_kali_terms():
         print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
@@ -191,7 +185,6 @@ def deploy(
 @app.command()
 def destroy(
     instance: str = typer.Argument(..., help="Scenario ID to destroy"),
-    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
     """Tear down a deployed scenario."""
@@ -204,13 +197,8 @@ def destroy(
     if deployment.status == "failed":
         print_warning(f"Deployment {instance} was in a failed state — cleaning up.")
 
-    if not auto_approve:
-        proceed = typer.confirm(f"Destroy deployment {instance}?")
-        if not proceed:
-            raise typer.Abort()
-
     tf = TerraformRunner(verbose=verbose)
-    if tf.destroy(auto_approve=True):
+    if tf.destroy():
         state.remove(instance)
         print_success(f"Deployment {instance} destroyed")
     else:
@@ -222,9 +210,7 @@ def destroy(
 
 
 @app.command()
-def clean(
-    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
-) -> None:
+def clean() -> None:
     """Reset local Terraform state and saboteur tracking when destroy fails.
 
     Use this when 'saboteur destroy' can't delete resources (e.g. permission errors).
@@ -256,11 +242,6 @@ def clean(
         "This will remove all resources from local Terraform state and clear deployment tracking.\n"
         "It does NOT delete anything from Azure — orphaned resources must be cleaned up manually in the portal."
     )
-
-    if not auto_approve:
-        proceed = typer.confirm("Proceed with local cleanup?")
-        if not proceed:
-            raise typer.Abort()
 
     removed = 0
     for resource in resources:

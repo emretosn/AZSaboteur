@@ -142,10 +142,8 @@ class TerraformRunner:
             result = self._run(args)
         return result.returncode == 0
 
-    def apply(self, var_file: Path | None = None, auto_approve: bool = True) -> bool:
+    def apply(self, var_file: Path | None = None) -> bool:
         args = ["apply", "-input=false", "-no-color", "-compact-warnings"]
-        if auto_approve:
-            args.append("-auto-approve")
         if var_file:
             args.append(f"-var-file={var_file}")
         if self.verbose:
@@ -160,10 +158,8 @@ class TerraformRunner:
         print_error(f"Terraform apply failed:\n{result.stderr}")
         return False
 
-    def destroy(self, var_file: Path | None = None, auto_approve: bool = True) -> bool:
+    def destroy(self, var_file: Path | None = None) -> bool:
         args = ["destroy", "-input=false", "-no-color", "-compact-warnings"]
-        if auto_approve:
-            args.append("-auto-approve")
         if var_file:
             args.append(f"-var-file={var_file}")
         if self.verbose:
