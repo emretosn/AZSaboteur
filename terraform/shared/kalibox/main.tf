@@ -72,6 +72,20 @@ resource "azurerm_linux_virtual_machine" "this" {
   disable_password_authentication = false
   network_interface_ids           = [azurerm_network_interface.this.id]
 
+  # Install xRDP + xfce4 at boot via cloud-init so the player can RDP in
+  custom_data = base64encode(<<-EOF
+    #!/bin/bash
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11
+    echo 'xfce4-session' > /home/${var.admin_username}/.xsession
+    chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
+    systemctl enable xrdp
+    systemctl restart xrdp
+  EOF
+  )
+
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
@@ -95,34 +109,6 @@ resource "azurerm_linux_virtual_machine" "this" {
     project  = "azsaboteur"
     scenario = var.scenario_id
     role     = "kalibox"
-  }
-}
-
-# Install xRDP + xfce4 so the player can RDP in with a desktop
-resource "azurerm_virtual_machine_extension" "xrdp" {
-  name                 = "install-xrdp"
-  virtual_machine_id   = azurerm_linux_virtual_machine.this.id
-  publisher            = "Microsoft.Azure.Extensions"
-  type                 = "CustomScript"
-  type_handler_version = "2.1"
-
-  settings = jsonencode({
-    commandToExecute = join(" && ", [
-      "export DEBIAN_FRONTEND=noninteractive",
-      "apt-get update -qq",
-      "apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11",
-      "systemctl enable xrdp",
-      "systemctl start xrdp",
-      "echo 'xfce4-session' > /home/${var.admin_username}/.xsession",
-      "chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession",
-      "sed -i 's/^port=3389/port=3389/' /etc/xrdp/xrdp.ini",
-      "systemctl restart xrdp",
-    ])
-  })
-
-  tags = {
-    project  = "azsaboteur"
-    scenario = var.scenario_id
   }
 }
 
