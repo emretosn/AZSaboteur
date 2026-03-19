@@ -137,23 +137,33 @@ def deploy(
 
     if not tf.init():
         raise typer.Exit(1)
+
+    # Record state *before* apply so a failed deploy can still be destroyed.
+    state = StateManager()
+    deployment = DeploymentState(
+        scenario_id=scenario.scenario_id,
+        region=region,
+        chain=[scenario.graph.get_module(mid).id for mid in scenario.graph.topo_order()],
+        flags=scenario.flags,
+        status="deploying",
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    state.add(deployment)
+
     if not tf.apply(var_file=var_file):
+        deployment.status = "failed"
+        state.add(deployment)
+        print_warning(
+            f"Deployment {scenario.scenario_id} failed. "
+            f"Run 'saboteur destroy {scenario.scenario_id}' to clean up."
+        )
         raise typer.Exit(1)
+
+    deployment.status = "deployed"
+    state.add(deployment)
 
     tf_outputs = tf.output()
     kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
-
-    state = StateManager()
-    state.add(
-        DeploymentState(
-            scenario_id=scenario.scenario_id,
-            region=region,
-            chain=[scenario.graph.get_module(mid).id for mid in scenario.graph.topo_order()],
-            flags=scenario.flags,
-            status="deployed",
-            created_at=datetime.now(timezone.utc).isoformat(),
-        )
-    )
 
     kali_user = scenario.kali_credentials["username"]
     kali_pass = scenario.kali_credentials["password"]
@@ -178,6 +188,9 @@ def destroy(
         print_error(f"No deployment found with ID: {instance}")
         raise typer.Exit(1)
 
+    if deployment.status == "failed":
+        print_warning(f"Deployment {instance} was in a failed state — cleaning up.")
+
     if not auto_approve:
         proceed = typer.confirm(f"Destroy deployment {instance}?")
         if not proceed:
@@ -188,34 +201,29 @@ def destroy(
         state.remove(instance)
         print_success(f"Deployment {instance} destroyed")
     else:
-        print_error("Destroy failed")
+        print_error("Destroy failed — you may need to clean up manually via the Azure portal or 'terraform destroy' in terraform/")
         raise typer.Exit(1)
 
 
 @app.command()
 def status() -> None:
-    """Show active deployments."""
+    """Show all tracked deployments."""
     state = StateManager()
-    deployments = state.active
+    deployments = state.all
     if not deployments:
-        print_info("No active deployments")
+        print_info("No deployments tracked")
         return
 
-    from rich.table import Table
+    status_styles = {"deployed": "green", "failed": "red", "deploying": "yellow"}
 
-    table = Table(title="Active Deployments")
-    table.add_column("Scenario ID", style="cyan")
-    table.add_column("Region", style="white")
-    table.add_column("Chain", style="yellow")
-    table.add_column("Created", style="dim")
     for dep in deployments:
-        table.add_row(
-            dep.scenario_id,
-            dep.region,
-            " → ".join(dep.chain),
-            dep.created_at,
+        style = status_styles.get(dep.status, "white")
+        chain_str = " → ".join(dep.chain)
+        out.print(
+            f"  [{style}]{dep.status:<10}[/{style}] "
+            f"[cyan]{dep.scenario_id}[/cyan]  "
+            f"{chain_str}  ({dep.region}, {dep.created_at})"
         )
-    out.print(table)
 
 
 @app.command()
