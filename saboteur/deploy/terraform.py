@@ -99,6 +99,28 @@ class TerraformRunner:
         if chain_tf.exists():
             chain_tf.unlink()
 
+    def state_list(self) -> list[str]:
+        """List all resources in the Terraform state."""
+        result = subprocess.run(
+            ["terraform", "state", "list"],
+            cwd=self.working_dir,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().splitlines()
+        return []
+
+    def state_rm(self, address: str) -> bool:
+        """Remove a resource from the Terraform state (does not delete the real resource)."""
+        result = subprocess.run(
+            ["terraform", "state", "rm", address],
+            cwd=self.working_dir,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
     def init(self) -> bool:
         if self.verbose:
             print_info("Running: terraform init")

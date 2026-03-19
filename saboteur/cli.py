@@ -214,8 +214,73 @@ def destroy(
         state.remove(instance)
         print_success(f"Deployment {instance} destroyed")
     else:
-        print_error("Destroy failed — you may need to clean up manually via the Azure portal or 'terraform destroy' in terraform/")
+        print_error(
+            "Destroy failed — resources may be stuck in state due to permission errors.\n"
+            "Run 'saboteur clean' to reset local state, then delete orphaned resources in the Azure portal."
+        )
         raise typer.Exit(1)
+
+
+@app.command()
+def clean(
+    auto_approve: bool = typer.Option(False, "--auto-approve", "-y", help="Skip confirmation"),
+) -> None:
+    """Reset local Terraform state and saboteur tracking when destroy fails.
+
+    Use this when 'saboteur destroy' can't delete resources (e.g. permission errors).
+    It removes all resources from Terraform state and clears saboteur deployment tracking.
+    Orphaned Azure resources must be deleted manually via the portal.
+    """
+    tf = TerraformRunner()
+    resources = tf.state_list()
+
+    state = StateManager()
+    deployments = state.all
+
+    if not resources and not deployments:
+        print_info("Nothing to clean — Terraform state and deployment tracking are already empty")
+        return
+
+    if resources:
+        print_warning(f"Terraform state contains {len(resources)} resource(s):")
+        for r in resources:
+            out.print(f"  [dim]{r}[/dim]")
+
+    if deployments:
+        print_warning(f"Saboteur is tracking {len(deployments)} deployment(s):")
+        for dep in deployments:
+            out.print(f"  [cyan]{dep.scenario_id}[/cyan] ({dep.status})")
+
+    out.print()
+    print_warning(
+        "This will remove all resources from local Terraform state and clear deployment tracking.\n"
+        "It does NOT delete anything from Azure — orphaned resources must be cleaned up manually in the portal."
+    )
+
+    if not auto_approve:
+        proceed = typer.confirm("Proceed with local cleanup?")
+        if not proceed:
+            raise typer.Abort()
+
+    removed = 0
+    for resource in resources:
+        if tf.state_rm(resource):
+            removed += 1
+            print_info(f"Removed from state: {resource}")
+        else:
+            print_error(f"Failed to remove: {resource}")
+
+    tf.clean_chain_tf()
+
+    for dep in deployments:
+        state.remove(dep.scenario_id)
+
+    print_success(
+        f"Local cleanup complete — removed {removed} resource(s) from Terraform state, "
+        f"cleared {len(deployments)} deployment(s) from tracking"
+    )
+    if resources:
+        print_warning("Remember to delete orphaned resources in the Azure portal")
 
 
 @app.command()
