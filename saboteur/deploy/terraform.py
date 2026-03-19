@@ -158,8 +158,15 @@ class TerraformRunner:
         return False
 
     def output(self) -> dict[str, Any]:
-        result = self._run(["output", "-json", "-no-color"])
-        if result.returncode == 0:
+        # Always capture stdout for output parsing, even in verbose mode
+        cmd = ["terraform", "output", "-json", "-no-color"]
+        result = subprocess.run(
+            cmd,
+            cwd=self.working_dir,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
             return json.loads(result.stdout)
         return {}
 
