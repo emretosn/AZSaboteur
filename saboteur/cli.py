@@ -48,7 +48,7 @@ def _load_engine(seed: int | None = None) -> ScenarioEngine:
 
 @app.command()
 def generate(
-    chain_length: int = typer.Option(3, "--chain-length", "-n", help="Number of steps in the attack chain"),
+    chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories: web,identity,compute,storage,networking"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed for reproducibility"),
@@ -70,10 +70,13 @@ def generate(
     scenario = engine.generate(config)
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
-    if verbose:
-        print_chain_verbose(chain_data)
+    if chain_data:
+        if verbose:
+            print_chain_verbose(chain_data)
+        else:
+            print_chain_summary(chain_data)
     else:
-        print_chain_summary(chain_data)
+        print_info("Infra-only mode — no attack chain generated")
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
     if output_file:
@@ -86,7 +89,7 @@ def generate(
 
 @app.command()
 def deploy(
-    chain_length: int = typer.Option(3, "--chain-length", "-n", help="Number of steps in the attack chain"),
+    chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
@@ -115,10 +118,13 @@ def deploy(
     scenario = engine.generate(config)
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
-    if verbose:
-        print_chain_verbose(chain_data)
+    if chain_data:
+        if verbose:
+            print_chain_verbose(chain_data)
+        else:
+            print_chain_summary(chain_data)
     else:
-        print_chain_summary(chain_data)
+        print_info("Infra-only mode — deploying Kali box and networking only")
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
     if not auto_approve:
@@ -168,11 +174,18 @@ def deploy(
     kali_user = scenario.kali_credentials["username"]
     kali_pass = scenario.kali_credentials["password"]
     print_success("Deployment complete!")
-    print_mission_briefing(
-        target=f"{kali_ip} (Kali box)",
-        objective="Scan the network from the Kali box, exploit the chain, and find the flags.",
-        connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
-    )
+    if chain_data:
+        print_mission_briefing(
+            target=f"{kali_ip} (Kali box)",
+            objective="Scan the network from the Kali box, exploit the chain, and find the flags.",
+            connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
+        )
+    else:
+        print_mission_briefing(
+            target=f"{kali_ip} (Kali box)",
+            objective="Infra-only deployment — no attack chain. Use this environment for testing.",
+            connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
+        )
 
 
 @app.command()

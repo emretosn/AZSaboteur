@@ -66,9 +66,10 @@ class Scenario:
 
     def player_briefing(self) -> dict[str, str]:
         """Generate the mission briefing for the player."""
-        entry = self.graph.entry_modules()[0]
+        entries = self.graph.entry_modules()
+        target = self.resource_names.get(entries[0].id, self.scenario_id) if entries else self.scenario_id
         return {
-            "target": self.resource_names.get(entry.id, self.scenario_id),
+            "target": target,
             "objective": "Find the flag hidden in the Azure environment.",
             "chain_length": str(len(self.graph.nodes)),
         }
@@ -121,6 +122,9 @@ class ScenarioEngine:
         run (with a different seed) produces a different chain.  Raises
         ``ValueError`` only when no chain of the requested length exists at all.
         """
+        if config.chain_length == 0:
+            return []
+
         entry_points = self.catalog.entry_points(categories=config.categories)
         if not entry_points:
             raise ValueError("No entry point modules available for the given filters.")
