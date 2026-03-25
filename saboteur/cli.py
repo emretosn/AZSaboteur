@@ -130,7 +130,7 @@ def deploy(
         print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
         raise typer.Exit(1)
 
-    tf = TerraformRunner(verbose=verbose)
+    tf = TerraformRunner(verbose=verbose, scenario_id=scenario.scenario_id)
     tf_vars = scenario.to_terraform_vars()
     var_file = tf.write_var_file(tf_vars)
     tf.generate_chain_tf(tf_vars["chain"])
@@ -197,7 +197,10 @@ def destroy(
     if deployment.status == "failed":
         print_warning(f"Deployment {instance} was in a failed state — cleaning up.")
 
-    tf = TerraformRunner(verbose=verbose)
+    tf = TerraformRunner(verbose=verbose, scenario_id=instance)
+    if not tf.init():
+        raise typer.Exit(1)
+
     if tf.destroy():
         state.remove(instance)
         print_success(f"Deployment {instance} destroyed")
@@ -217,25 +220,16 @@ def clean() -> None:
     It removes all resources from Terraform state and clears saboteur deployment tracking.
     Orphaned Azure resources must be deleted manually via the portal.
     """
-    tf = TerraformRunner()
-    resources = tf.state_list()
-
     state = StateManager()
     deployments = state.all
 
-    if not resources and not deployments:
-        print_info("Nothing to clean — Terraform state and deployment tracking are already empty")
+    if not deployments:
+        print_info("Nothing to clean — no deployments tracked")
         return
 
-    if resources:
-        print_warning(f"Terraform state contains {len(resources)} resource(s):")
-        for r in resources:
-            out.print(f"  [dim]{r}[/dim]")
-
-    if deployments:
-        print_warning(f"Saboteur is tracking {len(deployments)} deployment(s):")
-        for dep in deployments:
-            out.print(f"  [cyan]{dep.scenario_id}[/cyan] ({dep.status})")
+    print_warning(f"Saboteur is tracking {len(deployments)} deployment(s):")
+    for dep in deployments:
+        out.print(f"  [cyan]{dep.scenario_id}[/cyan] ({dep.status})")
 
     out.print()
     print_warning(
@@ -243,25 +237,36 @@ def clean() -> None:
         "It does NOT delete anything from Azure — orphaned resources must be cleaned up manually in the portal."
     )
 
-    removed = 0
-    for resource in resources:
-        if tf.state_rm(resource):
-            removed += 1
-            print_info(f"Removed from state: {resource}")
-        else:
-            print_error(f"Failed to remove: {resource}")
-
-    tf.clean_chain_tf()
-
+    total_removed = 0
     for dep in deployments:
+        tf = TerraformRunner(scenario_id=dep.scenario_id)
+        if not tf.init():
+            print_error(f"Failed to init workspace for {dep.scenario_id}")
+            continue
+
+        resources = tf.state_list()
+        if resources:
+            print_warning(f"Workspace '{dep.scenario_id}' contains {len(resources)} resource(s):")
+            for r in resources:
+                out.print(f"  [dim]{r}[/dim]")
+            for resource in resources:
+                if tf.state_rm(resource):
+                    total_removed += 1
+                    print_info(f"Removed from state: {resource}")
+                else:
+                    print_error(f"Failed to remove: {resource}")
+
+        tf._delete_workspace()
         state.remove(dep.scenario_id)
 
+    tf_default = TerraformRunner()
+    tf_default.clean_chain_tf()
+
     print_success(
-        f"Local cleanup complete — removed {removed} resource(s) from Terraform state, "
+        f"Local cleanup complete — removed {total_removed} resource(s) from Terraform state, "
         f"cleared {len(deployments)} deployment(s) from tracking"
     )
-    if resources:
-        print_warning("Remember to delete orphaned resources in the Azure portal")
+    print_warning("Remember to delete orphaned resources in the Azure portal")
 
 
 @app.command()

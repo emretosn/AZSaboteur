@@ -9,7 +9,7 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
-from saboteur.utils.output import console, print_error, print_info, print_success
+from saboteur.utils.output import console, print_error, print_info, print_success, print_warning
 
 TERRAFORM_DIR = Path(__file__).resolve().parent.parent.parent / "terraform"
 CHAIN_TF_FILENAME = "chain.tf"
@@ -23,9 +23,15 @@ def _sanitize_block_name(module_id: str) -> str:
 class TerraformRunner:
     """Wraps Terraform CLI commands for scenario deployment."""
 
-    def __init__(self, working_dir: Path | None = None, verbose: bool = False) -> None:
+    def __init__(
+        self,
+        working_dir: Path | None = None,
+        verbose: bool = False,
+        scenario_id: str | None = None,
+    ) -> None:
         self.working_dir = working_dir or TERRAFORM_DIR
         self.verbose = verbose
+        self.scenario_id = scenario_id
 
     def _run(self, args: list[str]) -> subprocess.CompletedProcess:
         cmd = ["terraform", *args]
@@ -100,26 +106,36 @@ class TerraformRunner:
             chain_tf.unlink()
 
     def state_list(self) -> list[str]:
-        """List all resources in the Terraform state."""
-        result = subprocess.run(
-            ["terraform", "state", "list"],
-            cwd=self.working_dir,
-            capture_output=True,
-            text=True,
-        )
+        """List all resources in the current workspace's Terraform state."""
+        result = self._run(["state", "list"])
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().splitlines()
         return []
 
     def state_rm(self, address: str) -> bool:
         """Remove a resource from the Terraform state (does not delete the real resource)."""
-        result = subprocess.run(
-            ["terraform", "state", "rm", address],
-            cwd=self.working_dir,
-            capture_output=True,
-            text=True,
-        )
+        result = self._run(["state", "rm", address])
         return result.returncode == 0
+
+    def _select_workspace(self) -> bool:
+        """Select (or create) the Terraform workspace for this scenario."""
+        if not self.scenario_id:
+            return True
+        result = self._run(["workspace", "select", "-or-create", self.scenario_id])
+        if result.returncode == 0:
+            return True
+        print_error(f"Failed to select workspace '{self.scenario_id}':\n{result.stderr}")
+        return False
+
+    def _delete_workspace(self) -> bool:
+        """Delete the scenario workspace after destroy, switching back to default."""
+        if not self.scenario_id:
+            return True
+        self._run(["workspace", "select", "default"])
+        result = self._run(["workspace", "delete", self.scenario_id])
+        if result.returncode != 0:
+            print_warning(f"Could not delete workspace '{self.scenario_id}' (may already be removed)")
+        return True
 
     def init(self) -> bool:
         if self.verbose:
@@ -128,11 +144,15 @@ class TerraformRunner:
         else:
             with console.status("[bold blue]Initializing Terraform...", spinner="dots", spinner_style="blue"):
                 result = self._run(["init", "-input=false", "-no-color"])
-        if result.returncode == 0:
-            print_success("Terraform initialized")
-            return True
-        print_error(f"Terraform init failed:\n{result.stderr}")
-        return False
+        if result.returncode != 0:
+            print_error(f"Terraform init failed:\n{result.stderr}")
+            return False
+
+        if not self._select_workspace():
+            return False
+
+        print_success("Terraform initialized")
+        return True
 
     def plan(self, var_file: Path | None = None) -> bool:
         args = ["plan", "-input=false", "-no-color", "-compact-warnings"]
@@ -170,6 +190,7 @@ class TerraformRunner:
                 result = self._run(args)
         if result.returncode == 0:
             self.clean_chain_tf()
+            self._delete_workspace()
             print_success("All resources destroyed")
             return True
         print_error(f"Terraform destroy failed:\n{result.stderr}")
@@ -177,9 +198,8 @@ class TerraformRunner:
 
     def output(self) -> dict[str, Any]:
         # Always capture stdout for output parsing, even in verbose mode
-        cmd = ["terraform", "output", "-json", "-no-color"]
         result = subprocess.run(
-            cmd,
+            ["terraform", "output", "-json", "-no-color"],
             cwd=self.working_dir,
             capture_output=True,
             text=True,
