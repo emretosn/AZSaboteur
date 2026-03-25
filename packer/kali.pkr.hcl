@@ -79,7 +79,7 @@ build {
       "sudo apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11",
 
       "echo '=== Installing Kali top 10 tools ==='",
-      "sudo apt-get install -y -qq kali-linux-top10",
+      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat",
 
       "echo '=== Configuring xRDP ==='",
       "sudo systemctl enable xrdp",

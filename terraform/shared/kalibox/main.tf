@@ -93,8 +93,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
       - systemctl enable xrdp
       - systemctl restart xrdp
-      - apt-get upgrade -y -qq
-      - apt-get install -y -qq kali-linux-top10 || true
+      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat || true
   EOF
   )
 
