@@ -86,18 +86,15 @@ resource "azurerm_linux_virtual_machine" "this" {
   custom_data = local.use_custom_image ? null : base64encode(<<-EOF
     #cloud-config
     package_update: true
-    package_upgrade: true
-    packages:
-      - xrdp
-      - xfce4
-      - xfce4-goodies
-      - dbus-x11
-      - kali-linux-top10
     runcmd:
+      - export DEBIAN_FRONTEND=noninteractive
+      - apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11
       - echo 'xfce4-session' > /home/${var.admin_username}/.xsession
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
       - systemctl enable xrdp
       - systemctl restart xrdp
+      - apt-get upgrade -y -qq
+      - apt-get install -y -qq kali-linux-top10 || true
   EOF
   )
 

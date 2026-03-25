@@ -36,15 +36,18 @@ def _run_vm_command(resource_group: str, vm_name: str, script: str) -> str | Non
 
 
 def _check_rdp_ready(resource_group: str, vm_name: str) -> bool:
-    """Return True if cloud-init is done and xRDP is active."""
+    """Return True if cloud-init has finished (success or error) and xRDP is active."""
     output = _run_vm_command(
         resource_group,
         vm_name,
-        "cloud-init status --long 2>/dev/null; echo '---'; systemctl is-active xrdp 2>/dev/null",
+        "cloud-init status 2>/dev/null; echo '---'; systemctl is-active xrdp 2>/dev/null",
     )
     if output is None:
         return False
-    return "status: done" in output and "active" in output.split("---")[-1]
+    # cloud-init reports "done" on success, "error" on partial failure — both mean it's finished
+    cloud_init_finished = "status: done" in output or "status: error" in output
+    xrdp_active = output.split("---")[-1].strip().startswith("active")
+    return cloud_init_finished and xrdp_active
 
 
 def wait_for_rdp(
