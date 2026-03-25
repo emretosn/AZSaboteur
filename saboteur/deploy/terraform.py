@@ -140,10 +140,10 @@ class TerraformRunner:
     def init(self) -> bool:
         if self.verbose:
             print_info("Running: terraform init")
-            result = self._run(["init", "-input=false", "-no-color"])
+            result = self._run(["init", "-input=false", "-no-color", "-upgrade"])
         else:
             with console.status("[bold blue]Initializing Terraform...", spinner="dots", spinner_style="blue"):
-                result = self._run(["init", "-input=false", "-no-color"])
+                result = self._run(["init", "-input=false", "-no-color", "-upgrade"])
         if result.returncode != 0:
             print_error(f"Terraform init failed:\n{result.stderr}")
             return False
