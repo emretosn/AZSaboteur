@@ -74,15 +74,20 @@ resource "azurerm_linux_virtual_machine" "this" {
 
   # Install xRDP + xfce4 at boot via cloud-init so the player can RDP in
   custom_data = base64encode(<<-EOF
-    #!/bin/bash
-    set -e
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11
-    echo 'xfce4-session' > /home/${var.admin_username}/.xsession
-    chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
-    systemctl enable xrdp
-    systemctl restart xrdp
+    #cloud-config
+    package_update: true
+    package_upgrade: true
+    packages:
+      - xrdp
+      - xfce4
+      - xfce4-goodies
+      - dbus-x11
+      - kali-linux-top10
+    runcmd:
+      - echo 'xfce4-session' > /home/${var.admin_username}/.xsession
+      - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
+      - systemctl enable xrdp
+      - systemctl restart xrdp
   EOF
   )
 
