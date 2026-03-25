@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -34,6 +35,7 @@ app = typer.Typer(
     name="saboteur",
     help="AZSaboteur — Dynamic Azure Cloud Attack Lab Generator",
     no_args_is_help=True,
+    invoke_without_command=True,
 )
 
 MODULES_DIR = Path(__file__).resolve().parent.parent / "modules"
@@ -47,8 +49,24 @@ def _load_engine(seed: int | None = None) -> ScenarioEngine:
     return ScenarioEngine(catalog, seed=seed)
 
 
+def _has_explicit_flags(ctx: typer.Context) -> bool:
+    """Return True if the user passed any explicit CLI flags (not just defaults)."""
+    # Click tracks where each parameter value came from
+    source = getattr(ctx, "_parameter_source", {}) or {}
+    for key, origin in source.items():
+        # ParameterSource.COMMANDLINE == 1; anything from the command line means scripted mode
+        if hasattr(origin, "name") and origin.name == "COMMANDLINE":
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# generate
+# ---------------------------------------------------------------------------
+
 @app.command()
 def generate(
+    ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories: web,identity,compute,storage,networking"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
@@ -59,7 +77,18 @@ def generate(
     """Generate a scenario without deploying (dry run)."""
     print_banner()
 
-    cat_list = _parse_categories(categories)
+    if not _has_explicit_flags(ctx):
+        from saboteur.utils.prompts import prompt_generate_config
+        cfg = prompt_generate_config()
+        chain_length = cfg["chain_length"]
+        cat_list = cfg["categories"]
+        region = cfg["region"]
+        seed = cfg["seed"]
+        output_file = cfg["output_file"]
+        verbose = cfg["verbose"]
+    else:
+        cat_list = _parse_categories(categories)
+
     config = ScenarioConfig(
         chain_length=chain_length,
         categories=cat_list,
@@ -88,8 +117,13 @@ def generate(
         print_success(f"Scenario written to {output_file}")
 
 
+# ---------------------------------------------------------------------------
+# deploy
+# ---------------------------------------------------------------------------
+
 @app.command()
 def deploy(
+    ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
@@ -101,12 +135,23 @@ def deploy(
     """Generate and deploy a scenario to Azure."""
     print_banner()
 
+    if not _has_explicit_flags(ctx):
+        from saboteur.utils.prompts import prompt_deploy_config
+        cfg = prompt_deploy_config()
+        chain_length = cfg["chain_length"]
+        cat_list = cfg["categories"]
+        region = cfg["region"]
+        seed = cfg["seed"]
+        image = cfg["image"] or None
+        verbose = cfg["verbose"]
+    else:
+        cat_list = _parse_categories(categories)
+
     sub_id = subscription_id or get_subscription_id()
     if not sub_id:
         print_error("No Azure subscription found. Run 'az login' or pass --subscription.")
         raise typer.Exit(1)
 
-    cat_list = _parse_categories(categories)
     config = ScenarioConfig(
         chain_length=chain_length,
         categories=cat_list,
@@ -193,13 +238,35 @@ def deploy(
         )
 
 
+# ---------------------------------------------------------------------------
+# destroy
+# ---------------------------------------------------------------------------
+
 @app.command()
 def destroy(
-    instance: str = typer.Argument(..., help="Scenario ID to destroy"),
+    ctx: typer.Context,
+    instance: Optional[str] = typer.Argument(None, help="Scenario ID to destroy"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
     """Tear down a deployed scenario."""
     state = StateManager()
+
+    if instance is None and not _has_explicit_flags(ctx):
+        if not state.all:
+            print_info("No deployments to destroy")
+            return
+        from saboteur.utils.prompts import prompt_destroy_instance
+        cfg = prompt_destroy_instance()
+        instance = cfg["instance"]
+        verbose = cfg["verbose"]
+        if not instance:
+            print_info("No deployments to destroy")
+            return
+
+    if not instance:
+        print_error("No scenario ID provided. Usage: saboteur destroy <SCENARIO_ID>")
+        raise typer.Exit(1)
+
     deployment = state.get(instance)
     if not deployment:
         print_error(f"No deployment found with ID: {instance}")
@@ -222,6 +289,10 @@ def destroy(
         )
         raise typer.Exit(1)
 
+
+# ---------------------------------------------------------------------------
+# clean
+# ---------------------------------------------------------------------------
 
 @app.command()
 def clean() -> None:
@@ -280,6 +351,10 @@ def clean() -> None:
     print_warning("Remember to delete orphaned resources in the Azure portal")
 
 
+# ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
 @app.command()
 def status() -> None:
     """Show all tracked deployments."""
@@ -293,13 +368,17 @@ def status() -> None:
 
     for dep in deployments:
         style = status_styles.get(dep.status, "white")
-        chain_str = " → ".join(dep.chain)
+        chain_str = " → ".join(dep.chain) if dep.chain else "infra-only"
         out.print(
             f"  [{style}]{dep.status:<10}[/{style}] "
             f"[cyan]{dep.scenario_id}[/cyan]  "
             f"{chain_str}  ({dep.region}, {dep.created_at})"
         )
 
+
+# ---------------------------------------------------------------------------
+# validate
+# ---------------------------------------------------------------------------
 
 @app.command()
 def validate(
@@ -327,6 +406,10 @@ def validate(
 
     print_error("Incorrect flag. Keep trying!")
 
+
+# ---------------------------------------------------------------------------
+# list-modules
+# ---------------------------------------------------------------------------
 
 @app.command("list-modules")
 def list_modules(
@@ -366,6 +449,10 @@ def list_modules(
         )
     out.print(table)
 
+
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
 
 def _parse_categories(categories: str | None) -> list[ModuleCategory] | None:
     if not categories:
