@@ -50,4 +50,5 @@ module "kalibox" {
   admin_username      = var.kali_admin_username
   admin_password      = var.kali_admin_password
   vm_size             = var.kali_vm_size
+  custom_image_id     = var.kali_custom_image_id
 }

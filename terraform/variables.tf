@@ -32,6 +32,12 @@ variable "kali_vm_size" {
   default     = "Standard_B2s_v2"
 }
 
+variable "kali_custom_image_id" {
+  description = "Resource ID of a pre-built Kali image (from 'packer build'). Leave empty to use the marketplace image with cloud-init."
+  type        = string
+  default     = ""
+}
+
 variable "chain" {
   description = "Attack chain module configuration (passed from scenario engine)"
   type        = any

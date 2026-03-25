@@ -95,6 +95,7 @@ def deploy(
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
     subscription_id: Optional[str] = typer.Option(None, "--subscription", help="Azure subscription ID (auto-detected from az cli if omitted)"),
+    image: Optional[str] = typer.Option(None, "--image", help="Custom Kali image resource ID (from 'packer build'). Skips cloud-init."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Terraform output for debugging"),
 ) -> None:
     """Generate and deploy a scenario to Azure."""
@@ -127,12 +128,15 @@ def deploy(
         print_info("Infra-only mode — deploying Kali box and networking only")
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
-    if not accept_kali_terms():
-        print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
-        raise typer.Exit(1)
+    if not image:
+        if not accept_kali_terms():
+            print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
+            raise typer.Exit(1)
 
     tf = TerraformRunner(verbose=verbose, scenario_id=scenario.scenario_id)
     tf_vars = scenario.to_terraform_vars()
+    if image:
+        tf_vars["kali_custom_image_id"] = image
     var_file = tf.write_var_file(tf_vars)
     tf.generate_chain_tf(tf_vars["chain"])
 
@@ -166,9 +170,10 @@ def deploy(
     tf_outputs = tf.output()
     kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
 
-    rg_name = f"rg-{scenario.scenario_id}"
-    vm_name = f"vm-kali-{scenario.scenario_id}"
-    wait_for_rdp(rg_name, vm_name)
+    if not image:
+        rg_name = f"rg-{scenario.scenario_id}"
+        vm_name = f"vm-kali-{scenario.scenario_id}"
+        wait_for_rdp(rg_name, vm_name)
 
     kali_user = scenario.kali_credentials["username"]
     kali_pass = scenario.kali_credentials["password"]

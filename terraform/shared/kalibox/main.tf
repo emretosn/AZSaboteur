@@ -29,6 +29,16 @@ variable "vm_size" {
   default = "Standard_B2s_v2"
 }
 
+variable "custom_image_id" {
+  type        = string
+  default     = ""
+  description = "Resource ID of a pre-built Kali image. When set, skips cloud-init provisioning and marketplace plan."
+}
+
+locals {
+  use_custom_image = var.custom_image_id != ""
+}
+
 resource "azurerm_public_ip" "this" {
   name                = "pip-kali-${var.scenario_id}"
   location            = var.region
@@ -72,8 +82,8 @@ resource "azurerm_linux_virtual_machine" "this" {
   disable_password_authentication = false
   network_interface_ids           = [azurerm_network_interface.this.id]
 
-  # Install xRDP + xfce4 at boot via cloud-init so the player can RDP in
-  custom_data = base64encode(<<-EOF
+  # Only run cloud-init when using the marketplace image (no pre-built image)
+  custom_data = local.use_custom_image ? null : base64encode(<<-EOF
     #cloud-config
     package_update: true
     package_upgrade: true
@@ -97,17 +107,27 @@ resource "azurerm_linux_virtual_machine" "this" {
     disk_size_gb         = 40
   }
 
-  source_image_reference {
-    publisher = "kali-linux"
-    offer     = "kali"
-    sku       = "kali-2025-2"
-    version   = "latest"
+  # Custom image: use source_image_id
+  source_image_id = local.use_custom_image ? var.custom_image_id : null
+
+  # Marketplace image: use source_image_reference + plan
+  dynamic "source_image_reference" {
+    for_each = local.use_custom_image ? [] : [1]
+    content {
+      publisher = "kali-linux"
+      offer     = "kali"
+      sku       = "kali-2025-2"
+      version   = "latest"
+    }
   }
 
-  plan {
-    name      = "kali-2025-2"
-    publisher = "kali-linux"
-    product   = "kali"
+  dynamic "plan" {
+    for_each = local.use_custom_image ? [] : [1]
+    content {
+      name      = "kali-2025-2"
+      publisher = "kali-linux"
+      product   = "kali"
+    }
   }
 
   tags = {
