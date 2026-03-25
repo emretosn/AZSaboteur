@@ -1,0 +1,86 @@
+"""Post-deploy VM health checks — polls until the Kali box is ready for RDP."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import time
+
+from saboteur.utils.output import console, print_error, print_success, print_warning
+
+DEFAULT_TIMEOUT = 900  # 15 minutes
+POLL_INTERVAL = 20  # seconds between checks
+
+
+def _run_vm_command(resource_group: str, vm_name: str, script: str) -> str | None:
+    """Execute a script on the VM via az vm run-command and return stdout."""
+    try:
+        result = subprocess.run(
+            [
+                "az", "vm", "run-command", "invoke",
+                "-g", resource_group,
+                "-n", vm_name,
+                "--command-id", "RunShellScript",
+                "--scripts", script,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        return data["value"][0].get("message", "")
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError, IndexError):
+        return None
+
+
+def _check_rdp_ready(resource_group: str, vm_name: str) -> bool:
+    """Return True if cloud-init is done and xRDP is active."""
+    output = _run_vm_command(
+        resource_group,
+        vm_name,
+        "cloud-init status --long 2>/dev/null; echo '---'; systemctl is-active xrdp 2>/dev/null",
+    )
+    if output is None:
+        return False
+    return "status: done" in output and "active" in output.split("---")[-1]
+
+
+def wait_for_rdp(
+    resource_group: str,
+    vm_name: str,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> bool:
+    """Block until the Kali box is ready for RDP, showing a spinner.
+
+    Returns True if ready, False if timed out.
+    """
+    start = time.monotonic()
+
+    with console.status(
+        "[bold blue]Waiting for Kali desktop to be ready (installing xRDP + xfce4)...",
+        spinner="dots",
+        spinner_style="blue",
+    ):
+        while True:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                break
+
+            if _check_rdp_ready(resource_group, vm_name):
+                minutes, seconds = divmod(int(elapsed), 60)
+                time_str = f"{minutes}m{seconds:02d}s" if minutes else f"{seconds}s"
+                print_success(f"Kali desktop ready! (took {time_str})")
+                return True
+
+            remaining = timeout - elapsed
+            sleep_time = min(POLL_INTERVAL, remaining)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+    print_warning(
+        "Kali desktop setup is taking longer than expected.\n"
+        "It may still be installing — try connecting in a few minutes."
+    )
+    return False

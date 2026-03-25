@@ -16,6 +16,7 @@ from saboteur.modules.catalog import load_catalog
 from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
 from saboteur.utils.azure_auth import accept_kali_terms, get_subscription_id
+from saboteur.utils.vm_health import wait_for_rdp
 from saboteur.utils.output import (
     console as out,
     print_banner,
@@ -165,20 +166,25 @@ def deploy(
     tf_outputs = tf.output()
     kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
 
+    rg_name = f"rg-{scenario.scenario_id}"
+    vm_name = f"vm-kali-{scenario.scenario_id}"
+    wait_for_rdp(rg_name, vm_name)
+
     kali_user = scenario.kali_credentials["username"]
     kali_pass = scenario.kali_credentials["password"]
     print_success("Deployment complete!")
+    conn_cmd = f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:'{kali_pass}' /cert:ignore"
     if chain_data:
         print_mission_briefing(
             target=f"{kali_ip} (Kali box)",
             objective="Scan the network from the Kali box, exploit the chain, and find the flags.",
-            connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
+            connection_info=conn_cmd,
         )
     else:
         print_mission_briefing(
             target=f"{kali_ip} (Kali box)",
             objective="Infra-only deployment — no attack chain. Use this environment for testing.",
-            connection_info=f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:{kali_pass} /cert:ignore",
+            connection_info=conn_cmd,
         )
 
 

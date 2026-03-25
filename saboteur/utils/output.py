@@ -64,7 +64,6 @@ def print_mission_briefing(target: str, objective: str, connection_info: str) ->
         f"[bold]Target:[/bold]      {target}\n"
         f"[bold]Objective:[/bold]   {objective}\n"
         f"[bold]Connect:[/bold]     {connection_info}"
-        "Consider that the Kali VM could take a few minutes to be provisioned and ready."
     )
     console.print(Panel(content, title="YOUR MISSION BRIEFING", border_style="bold yellow"))
 
