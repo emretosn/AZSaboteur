@@ -49,22 +49,24 @@ resource "azurerm_network_security_group" "kali" {
   location            = var.region
   resource_group_name = var.resource_group_name
 
-  security_rule {
-    name                       = "AllowRDP"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3389"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
   tags = {
     project  = "azsaboteur"
     scenario = var.scenario_id
   }
+}
+
+resource "azurerm_network_security_rule" "kali_allow_rdp" {
+  name                        = "AllowRDP"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "3389"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.kali.name
 }
 
 resource "azurerm_subnet_network_security_group_association" "kali" {
@@ -78,34 +80,38 @@ resource "azurerm_network_security_group" "lab" {
   location            = var.region
   resource_group_name = var.resource_group_name
 
-  security_rule {
-    name                       = "AllowFromKali"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "10.13.37.0/28"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "DenyInternetInbound"
-    priority                   = 200
-    direction                  = "Inbound"
-    access                     = "Deny"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "Internet"
-    destination_address_prefix = "*"
-  }
-
   tags = {
     project  = "azsaboteur"
     scenario = var.scenario_id
   }
+}
+
+resource "azurerm_network_security_rule" "lab_allow_from_kali" {
+  name                        = "AllowFromKali"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "*"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "10.13.37.0/28"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.lab.name
+}
+
+resource "azurerm_network_security_rule" "lab_deny_internet" {
+  name                        = "DenyInternetInbound"
+  priority                    = 200
+  direction                   = "Inbound"
+  access                      = "Deny"
+  protocol                    = "*"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "Internet"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.lab.name
 }
 
 resource "azurerm_subnet_network_security_group_association" "lab" {
