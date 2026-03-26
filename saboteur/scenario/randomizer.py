@@ -48,8 +48,21 @@ class Randomizer:
         return creds
 
     def _password(self, length: int = 16) -> str:
-        chars = string.ascii_letters + string.digits + "!@#$%&*"
-        return "".join(secrets.choice(chars) for _ in range(length))
+        lower = string.ascii_lowercase
+        upper = string.ascii_uppercase
+        digits = string.digits
+        special = "!@#$%&*"
+        all_chars = lower + upper + digits + special
+        # Guarantee at least one character from each class to meet Azure complexity
+        password = [
+            secrets.choice(lower),
+            secrets.choice(upper),
+            secrets.choice(digits),
+            secrets.choice(special),
+        ]
+        password += [secrets.choice(all_chars) for _ in range(length - 4)]
+        self.rng.shuffle(password)
+        return "".join(password)
 
     def sql_table_name(self) -> str:
         return f"tbl_{self._hex(6)}"
