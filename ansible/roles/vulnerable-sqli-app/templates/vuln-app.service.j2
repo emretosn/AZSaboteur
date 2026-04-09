@@ -1,0 +1,16 @@
+[Unit]
+Description=AZSaboteur SQLi App (step {{ step_index }})
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
+Restart=always
+RestartSec=3
+Environment="FLAG={{ flag }}"
+Environment="NEXT_STEP_SECRET={{ next_step_secret }}"
+Environment="DB_PATH={{ db_path }}"
+
+[Install]
+WantedBy=multi-user.target

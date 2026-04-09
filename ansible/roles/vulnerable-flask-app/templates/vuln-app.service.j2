@@ -1,0 +1,17 @@
+[Unit]
+Description=AZSaboteur Vulnerable Web App (step {{ step_index }})
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/bin/python3 {{ app_dir }}/app.py
+Restart=always
+RestartSec=3
+Environment="FLAG={{ flag }}"
+Environment="NEXT_STEP_SECRET={{ next_step_secret }}"
+Environment="APP_SECRET={{ next_step_secret }}"
+Environment="NEXT_STEP_HINT={{ next_step_secret }}"
+
+[Install]
+WantedBy=multi-user.target

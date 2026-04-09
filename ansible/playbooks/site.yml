@@ -1,0 +1,94 @@
+---
+# AZSaboteur — Site playbook
+# Applies the correct Ansible role to each host group.
+# The inventory is generated dynamically by the saboteur CLI.
+
+# --- Web vulnerability modules ---
+- name: Deploy SSRF vulnerable app
+  hosts: vulnerable_flask_app
+  become: true
+  roles:
+    - vulnerable-flask-app
+
+- name: Deploy SQLi vulnerable app
+  hosts: vulnerable_sqli_app
+  become: true
+  roles:
+    - vulnerable-sqli-app
+
+- name: Deploy command injection vulnerable app
+  hosts: vulnerable_cmdi_app
+  become: true
+  roles:
+    - vulnerable-cmdi-app
+
+- name: Deploy git-exposed vulnerable app
+  hosts: vulnerable_git_app
+  become: true
+  roles:
+    - vulnerable-git-app
+
+# --- Infrastructure / VM modules ---
+- name: Configure NSG-open VM
+  hosts: nsg_open
+  become: true
+  roles:
+    - nsg-open
+
+- name: Configure management-exposed VM
+  hosts: mgmt_exposed
+  become: true
+  roles:
+    - mgmt-exposed
+
+- name: Configure VM with managed identity
+  hosts: vm_imds
+  become: true
+  roles:
+    - vm-imds
+
+# --- Azure-API-only modules (localhost / no-ops) ---
+- name: Provision VM run-command module
+  hosts: vm_runcommand
+  roles:
+    - vm-runcommand
+
+- name: Provision Key Vault module
+  hosts: keyvault_lax
+  roles:
+    - keyvault-lax
+
+- name: Provision public blob module
+  hosts: public_blob
+  roles:
+    - public-blob
+
+- name: Provision Cosmos DB module
+  hosts: cosmosdb_key
+  roles:
+    - cosmosdb-key
+
+- name: Provision SAS token module
+  hosts: sas_token
+  roles:
+    - sas-token
+
+- name: Provision over-privileged SP module
+  hosts: overperm_sp
+  roles:
+    - overperm-sp
+
+- name: Provision app registration module
+  hosts: appreg_secret
+  roles:
+    - appreg-secret
+
+- name: Provision function app module
+  hosts: function_app_env
+  roles:
+    - function-app-env
+
+- name: Provision automation runbook module
+  hosts: automation_runbook
+  roles:
+    - automation-runbook

@@ -1,0 +1,7 @@
+---
+flag: ""
+next_step_secret: ""
+step_index: 0
+app_port: 5000
+app_dir: /opt/azsaboteur/app
+web_root: /var/www/app

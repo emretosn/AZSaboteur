@@ -1,0 +1,48 @@
+---
+- name: Create app directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy application files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ app_dir }}/{{ item }}"
+    mode: "0644"
+  loop:
+    - app.py
+    - init_db.py
+    - requirements.txt
+
+- name: Install Python dependencies
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    executable: pip3
+
+- name: Seed the database
+  ansible.builtin.command:
+    cmd: python3 {{ app_dir }}/init_db.py
+  environment:
+    FLAG: "{{ flag }}"
+    NEXT_STEP_SECRET: "{{ next_step_secret }}"
+    DB_PATH: "{{ db_path }}"
+
+- name: Write flag file
+  ansible.builtin.copy:
+    content: "{{ flag }}"
+    dest: /opt/azsaboteur/flag.txt
+    mode: "0600"
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: vuln-app.service.j2
+    dest: /etc/systemd/system/vuln-app.service
+    mode: "0644"
+
+- name: Enable and start vulnerable app
+  ansible.builtin.systemd:
+    name: vuln-app
+    state: started
+    enabled: true
+    daemon_reload: true
