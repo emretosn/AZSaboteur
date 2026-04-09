@@ -1,0 +1,4 @@
+---
+- name: "{{ role_name }} — provisioned by Terraform"
+  ansible.builtin.debug:
+    msg: "Module {{ role_name }} is fully configured by Terraform. No Ansible tasks needed."

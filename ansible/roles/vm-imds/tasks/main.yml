@@ -1,0 +1,32 @@
+---
+- name: Ensure azsaboteur directory exists
+  ansible.builtin.file:
+    path: /opt/azsaboteur
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Write flag file
+  ansible.builtin.copy:
+    dest: /opt/azsaboteur/flag.txt
+    mode: "0644"
+    content: "{{ flag }}"
+  become: true
+
+- name: Create deployment notes hinting at IMDS and Azure resources
+  ansible.builtin.copy:
+    dest: /opt/azsaboteur/notes.txt
+    mode: "0644"
+    content: |
+      === VM Deployment Notes ===
+
+      This VM has a managed identity assigned by Terraform.
+      The identity has permissions on resources in this resource group.
+
+      Useful endpoints:
+        - Instance metadata: http://169.254.169.254/metadata/instance?api-version=2021-02-01
+        - Managed identity token: http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/
+
+      Tip: Use the token to enumerate what this identity can access.
+      Look for storage accounts, Key Vaults, and other resources in the RG.
+  become: true

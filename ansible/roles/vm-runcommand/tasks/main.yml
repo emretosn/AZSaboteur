@@ -1,0 +1,6 @@
+---
+- name: VM Run Command module — no Ansible configuration needed
+  ansible.builtin.debug:
+    msg: >-
+      Module vm-runcommand is exploited via the Azure Run Command API.
+      The target VM is configured by its own role. No additional setup required.

@@ -1,0 +1,77 @@
+---
+- name: Install python3
+  ansible.builtin.package:
+    name: python3
+    state: present
+  become: true
+
+- name: Create banner directory
+  ansible.builtin.file:
+    path: /opt/azsaboteur/banner
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Deploy fake internal dashboard page
+  ansible.builtin.copy:
+    dest: /opt/azsaboteur/banner/index.html
+    mode: "0644"
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>Internal Dashboard — AZ Corp</title></head>
+      <body>
+        <h1>AZ Corp Internal Dashboard</h1>
+        <p>Welcome to the internal management console.</p>
+        <p>Authorised personnel only. All access is logged.</p>
+        <div id="status">
+          <h2>Service Status</h2>
+          <ul>
+            <li>API Gateway — <span style="color:green">Online</span></li>
+            <li>Identity Provider — <span style="color:green">Online</span></li>
+            <li>Key Vault — <span style="color:orange">Degraded</span></li>
+          </ul>
+        </div>
+        <!-- TODO: rotate credentials for the service principal before next audit -->
+        <!-- next_step_secret={{ next_step_secret }} -->
+        <footer data-deploy-token="{{ next_step_secret }}">
+          <p>&copy; AZ Corp — Step {{ step_index }}</p>
+        </footer>
+      </body>
+      </html>
+  become: true
+
+- name: Write flag file
+  ansible.builtin.copy:
+    dest: /opt/azsaboteur/flag.txt
+    mode: "0644"
+    content: "{{ flag }}"
+  become: true
+
+- name: Deploy banner HTTP server systemd unit
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/azsaboteur-banner.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=AZSaboteur Banner HTTP Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      WorkingDirectory=/opt/azsaboteur/banner
+      ExecStart=/usr/bin/python3 -m http.server 8080
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+  become: true
+
+- name: Enable and start banner HTTP server
+  ansible.builtin.systemd:
+    name: azsaboteur-banner
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true

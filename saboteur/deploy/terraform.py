@@ -70,11 +70,14 @@ class TerraformRunner:
             "# Re-generated on every `saboteur deploy`.\n",
         ]
 
+        block_names: list[tuple[int, str]] = []
+
         for step in chain:
             idx = step["step"]
             module_id = step["module_id"]
             source = f"./{step['module']}"
             block_name = f"step_{idx}_{_sanitize_block_name(module_id)}"
+            block_names.append((idx, block_name))
 
             block = textwrap.dedent(f"""\
                 module "{block_name}" {{
@@ -93,6 +96,18 @@ class TerraformRunner:
                 }}
             """)
             blocks.append(block)
+
+        # Emit a single output that collects all per-step module outputs.
+        if block_names:
+            lines = [
+                'output "chain_outputs" {',
+                '  description = "Per-step outputs from chain modules"',
+                '  value = {',
+            ]
+            for idx, name in block_names:
+                lines.append(f'    "{idx}" = module.{name}')
+            lines.extend(['  }', '  sensitive = true', '}', ''])
+            blocks.append("\n".join(lines))
 
         chain_tf = self.working_dir / CHAIN_TF_FILENAME
         chain_tf.write_text("\n".join(blocks))
