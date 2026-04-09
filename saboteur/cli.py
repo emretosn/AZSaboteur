@@ -11,6 +11,7 @@ from typing import Optional
 import typer
 
 from saboteur.config import DeploymentState, StateManager
+from saboteur.deploy.ansible import AnsibleRunner
 from saboteur.deploy.terraform import TerraformRunner
 from saboteur.modules.base import ModuleCategory
 from saboteur.modules.catalog import load_catalog
@@ -209,11 +210,41 @@ def deploy(
         )
         raise typer.Exit(1)
 
-    deployment.status = "deployed"
-    state.add(deployment)
-
     tf_outputs = tf.output()
     kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
+
+    # --- Phase 2: Ansible provisioning ---
+    if chain_data:
+        chain_steps = []
+        for i, node_id in enumerate(scenario.graph.topo_order()):
+            module = scenario.graph.get_module(node_id)
+            chain_steps.append({
+                "step": i,
+                "module_id": module.id,
+                "ansible_role": module.ansible_role,
+            })
+
+        kali_pass = scenario.kali_credentials["password"]
+        ansible = AnsibleRunner(verbose=verbose)
+        if not ansible.provision_scenario(
+            tf_outputs=tf_outputs,
+            chain_steps=chain_steps,
+            credentials=scenario.credentials,
+            flags={str(k): v for k, v in scenario.flags.items()},
+            kali_password=kali_pass,
+        ):
+            deployment.status = "deployed"
+            state.add(deployment)
+            print_warning(
+                "Ansible provisioning failed — infrastructure is deployed but "
+                "vulnerable services may not be running. You can re-run Ansible manually."
+            )
+        else:
+            deployment.status = "deployed"
+            state.add(deployment)
+    else:
+        deployment.status = "deployed"
+        state.add(deployment)
 
     if not image:
         rg_name = f"rg-{scenario.scenario_id}"
