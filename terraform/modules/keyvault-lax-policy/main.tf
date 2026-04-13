@@ -22,9 +22,8 @@ resource "azurerm_key_vault" "this" {
 
   # Intentional misconfiguration: grant Get+List to every principal in
   # reader_principal_ids (e.g. a managed identity whose token the player
-  # steals via IMDS).
-  # TODO: the chain generator (saboteur/deploy/terraform.py) must wire
-  # managed_identity_principal_id from preceding steps into this variable.
+  # steals via IMDS).  The chain generator wires managed_identity_principal_id
+  # from preceding steps into this variable automatically.
   dynamic "access_policy" {
     for_each = toset(var.reader_principal_ids)
     content {
