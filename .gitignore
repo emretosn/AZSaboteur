@@ -191,6 +191,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 terraform/chain.tf
+terraform/modules/**/.terraform.lock.hcl
 
 # Ansible
 *.retry
