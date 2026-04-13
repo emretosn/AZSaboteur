@@ -157,9 +157,7 @@ class ScenarioEngine:
         ]
 
         if config.categories:
-            filtered = [m for m in candidates if m.category in config.categories]
-            if filtered:
-                candidates = filtered
+            candidates = [m for m in candidates if m.category in config.categories]
 
         # Randomise so backtracking explores a different order each run
         self.rng.shuffle(candidates)

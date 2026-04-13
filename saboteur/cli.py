@@ -98,7 +98,11 @@ def generate(
     )
 
     engine = _load_engine(seed)
-    scenario = engine.generate(config)
+    try:
+        scenario = engine.generate(config)
+    except ValueError as exc:
+        print_error(str(exc))
+        raise typer.Exit(1) from None
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
     if chain_data:
@@ -162,7 +166,11 @@ def deploy(
     )
 
     engine = _load_engine(seed)
-    scenario = engine.generate(config)
+    try:
+        scenario = engine.generate(config)
+    except ValueError as exc:
+        print_error(str(exc))
+        raise typer.Exit(1) from None
 
     chain_data = [scenario.graph.get_module(mid).to_dict() for mid in scenario.graph.topo_order()]
     if chain_data:
