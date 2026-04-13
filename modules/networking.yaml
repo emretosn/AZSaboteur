@@ -1,11 +1,11 @@
 - id: NET-NSG-OPEN
   name: "Open NSG Rule"
   category: networking
-  description: "Access internal services through a misconfigured NSG allowing all inbound traffic"
+  description: "Access internal services through a misconfigured NSG allowing all inbound traffic, find an exposed service and gain shell access"
   requires:
     - network_access
   provides:
-    - internal_network_access
+    - vm_shell
   terraform_module: modules/nsg-open
   ansible_role: roles/nsg-open
   tags:

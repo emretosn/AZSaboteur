@@ -1,11 +1,11 @@
 - id: STR-PUBLIC-BLOB
   name: "Publicly Accessible Blob Container"
   category: storage
-  description: "Enumerate and download blobs from a public container containing credentials or configs"
+  description: "Enumerate and download blobs from a public container containing database credentials in a config file"
   requires:
     - network_access
   provides:
-    - storage_key
+    - sql_credentials
   terraform_module: modules/public-blob
   ansible_role: roles/public-blob
   tags:
@@ -16,11 +16,11 @@
 - id: STR-KEYVAULT-POLICY
   name: "Lax Key Vault Access Policy"
   category: storage
-  description: "Use a compromised identity to list and retrieve secrets from a misconfigured Key Vault"
+  description: "Use a compromised identity to list and retrieve secrets from a misconfigured Key Vault containing service principal credentials"
   requires:
     - managed_identity_token
   provides:
-    - keyvault_secret
+    - sp_credentials
   terraform_module: modules/keyvault-lax-policy
   ansible_role: roles/keyvault-lax
   tags:
@@ -30,11 +30,11 @@
 - id: STR-COSMOSDB-KEY
   name: "Cosmos DB Primary Key Leak"
   category: storage
-  description: "Connect to Cosmos DB with a leaked master key and read all data"
+  description: "Connect to Cosmos DB with a leaked master key and read documents containing application secrets"
   requires:
     - sql_credentials
   provides:
-    - cosmosdb_data
+    - app_secret
   terraform_module: modules/cosmosdb-leaked-key
   ansible_role: roles/cosmosdb-key
   tags:
@@ -44,11 +44,11 @@
 - id: STR-SAS-OVERPERM
   name: "Overly Permissive SAS Token"
   category: storage
-  description: "Use a leaked SAS token with excessive permissions to read/write storage data"
+  description: "Use a leaked SAS token with excessive permissions to read storage blobs containing database credentials"
   requires:
     - env_secrets
   provides:
-    - storage_key
+    - sql_credentials
   terraform_module: modules/sas-overperm
   ansible_role: roles/sas-token
   tags:

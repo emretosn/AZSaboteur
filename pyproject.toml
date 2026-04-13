@@ -23,6 +23,9 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
 ]
+deploy = [
+    "ansible-core>=2.15.0",
+]
 
 [project.scripts]
 saboteur = "saboteur.cli:app"

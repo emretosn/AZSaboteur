@@ -119,10 +119,10 @@ AZSaboteur ships with 16 vulnerability modules across 5 categories:
 
 | ID | Name | Entry Point | Requires | Provides |
 |---|---|---|---|---|
-| `STR-PUBLIC-BLOB` | Publicly Accessible Blob Container | Yes | `network_access` | `storage_key` |
-| `STR-KEYVAULT-POLICY` | Lax Key Vault Access Policy | No | `managed_identity_token` | `keyvault_secret` |
-| `STR-COSMOSDB-KEY` | Cosmos DB Primary Key Leak | No | `sql_credentials` | `cosmosdb_data` |
-| `STR-SAS-OVERPERM` | Overly Permissive SAS Token | No | `env_secrets` | `storage_key` |
+| `STR-PUBLIC-BLOB` | Publicly Accessible Blob Container | Yes | `network_access` | `sql_credentials` |
+| `STR-KEYVAULT-POLICY` | Lax Key Vault Access Policy | No | `managed_identity_token` | `sp_credentials` |
+| `STR-COSMOSDB-KEY` | Cosmos DB Primary Key Leak | No | `sql_credentials` | `app_secret` |
+| `STR-SAS-OVERPERM` | Overly Permissive SAS Token | No | `env_secrets` | `sql_credentials` |
 
 ### Compute
 
@@ -144,7 +144,7 @@ AZSaboteur ships with 16 vulnerability modules across 5 categories:
 
 | ID | Name | Entry Point | Requires | Provides |
 |---|---|---|---|---|
-| `NET-NSG-OPEN` | Open NSG Rule | Yes | `network_access` | `internal_network_access` |
+| `NET-NSG-OPEN` | Open NSG Rule | Yes | `network_access` | `vm_shell` |
 | `NET-MGMT-EXPOSED` | Exposed Management Port | Yes | `network_access` | `vm_shell` |
 
 ---
@@ -169,13 +169,13 @@ NET-MGMT-EXPOSED → CMP-IMDS → STR-KEYVAULT-POLICY
 
 Discover an exposed SSH port, log in with weak credentials to get a shell, query IMDS for a managed identity token, then pillage the Key Vault.
 
-### Long (6 steps)
+### Long (9 steps)
 
 ```
-WEB-SQLI → CMP-FUNC-ENV → IAM-OVERPERM-SP → CMP-RUNCOMMAND → CMP-IMDS → STR-KEYVAULT-POLICY
+WEB-CMDI → STR-SAS-OVERPERM → STR-COSMOSDB-KEY → IAM-APPREG-SECRET → CMP-AUTOMATION → CMP-IMDS → STR-KEYVAULT-POLICY → IAM-OVERPERM-SP → CMP-RUNCOMMAND
 ```
 
-Dump credentials via SQL injection, read Function App environment variables to obtain a service principal secret, escalate to Owner, run commands on a VM, grab an identity token from IMDS, and finally exfiltrate Key Vault secrets.
+Inject commands to leak a SAS token, use it to read storage containing DB credentials, connect to Cosmos DB to find an app secret, authenticate as an App Registration, abuse an Automation Account runbook, steal a managed identity token from IMDS, raid the Key Vault for SP credentials, escalate to Owner, and run commands on a VM.
 
 ---
 
