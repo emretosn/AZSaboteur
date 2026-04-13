@@ -12,13 +12,27 @@ resource "azurerm_key_vault" "this" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
-  # Intentionally lax: allow the deployer to set secrets,
-  # and any authenticated identity to read them.
+  # Deployer policy: full secret management for Terraform provisioning.
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
 
     secret_permissions = ["Get", "List", "Set", "Delete", "Purge"]
+  }
+
+  # Intentional misconfiguration: grant Get+List to every principal in
+  # reader_principal_ids (e.g. a managed identity whose token the player
+  # steals via IMDS).
+  # TODO: the chain generator (saboteur/deploy/terraform.py) must wire
+  # managed_identity_principal_id from preceding steps into this variable.
+  dynamic "access_policy" {
+    for_each = toset(var.reader_principal_ids)
+    content {
+      tenant_id = data.azurerm_client_config.current.tenant_id
+      object_id = access_policy.value
+
+      secret_permissions = ["Get", "List"]
+    }
   }
 
   tags = {

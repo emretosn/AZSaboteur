@@ -39,3 +39,9 @@ variable "credentials" {
   type        = map(string)
   sensitive   = true
 }
+
+variable "reader_principal_ids" {
+  description = "Principal IDs that should have Get+List access to Key Vault secrets (e.g. managed identities from preceding attack-chain steps)"
+  type        = list(string)
+  default     = []
+}
