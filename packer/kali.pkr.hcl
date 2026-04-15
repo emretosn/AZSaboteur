@@ -79,7 +79,28 @@ build {
       "sudo apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11",
 
       "echo '=== Installing Kali top 10 tools ==='",
-      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat",
+      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists",
+
+      "echo '=== Generating Azure-filtered password wordlist ==='",
+      "sudo mkdir -p /usr/share/wordlists",
+      <<-SCRIPT
+      sudo python3 -c "
+      import re
+      src = '/usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt'
+      with open(src) as f:
+          pws = [l.strip() for l in f if l.strip()]
+      out = [p for p in pws if len(p) >= 6 and sum([
+          bool(re.search(r'[a-z]', p)),
+          bool(re.search(r'[A-Z]', p)),
+          bool(re.search(r'[0-9]', p)),
+          bool(re.search(r'[^a-zA-Z0-9]', p)),
+      ]) >= 3]
+      with open('/usr/share/wordlists/azure-passwords.txt', 'w') as f:
+          f.write('\n'.join(out) + '\n')
+      print(f'Filtered {len(out)} Azure-compatible passwords from {len(pws)}')
+      "
+      SCRIPT
+      ,
 
       "echo '=== Configuring xRDP ==='",
       "sudo systemctl enable xrdp",
@@ -95,67 +116,6 @@ build {
   provisioner "shell" {
     inline = [
       "echo 'xfce4-session' | sudo tee /etc/skel/.xsession",
-    ]
-  }
-
-  # Ship a small password wordlist for brute-force exercises
-  provisioner "shell" {
-    inline = [
-      "sudo mkdir -p /usr/share/wordlists",
-      <<-SCRIPT
-      sudo tee /usr/share/wordlists/cloud-common.txt > /dev/null << 'WLIST'
-password
-123456
-admin
-letmein
-welcome
-monkey
-master
-dragon
-login
-abc123
-admin123
-root
-toor
-pass
-test
-guest
-access
-iloveyou
-1234567890
-trustno1
-changeme
-P@ssw0rd
-P@ss1234
-Password1
-Password123!
-Welcome2025!
-Admin@1234
-Summer2025!
-Backup123!
-Service1!
-Passw0rd!
-Azure2025!
-Deploy123!
-Qwerty@123
-Winter2024!
-Autumn2025!
-Spring2025!
-Monday01!
-Server2025!
-Database1!
-Network1!
-Cloud123!
-DevOps2025!
-Secure@123
-Company1!
-Support1!
-Helpdesk1!
-Manager1!
-System@123
-Testing123!
-WLIST
-      SCRIPT
     ]
   }
 

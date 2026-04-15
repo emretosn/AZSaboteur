@@ -95,7 +95,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
       - systemctl enable xrdp
       - systemctl restart xrdp
-      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat || true
+      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists || true
       - mkdir -p /home/${var.admin_username}/Desktop
       - |
         cat > /home/${var.admin_username}/Desktop/README.txt << 'MOTD'
@@ -118,67 +118,35 @@ resource "azurerm_linux_virtual_machine" "this" {
           metasploit, burpsuite, responder, aircrack-ng
 
         WORDLISTS
-          /usr/share/wordlists/cloud-common.txt  (passwords)
+          /usr/share/wordlists/azure-passwords.txt  (Azure-filtered passwords)
+          /usr/share/seclists/                       (full SecLists collection)
+
+        HINT
+          Azure VMs require passwords with 3-of-4: lowercase, uppercase,
+          digit, special character. The azure-passwords.txt wordlist is
+          pre-filtered from the NCSC 100k most-used passwords list for
+          passwords that meet this policy.
 
         Good luck, operator.
         MOTD
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/Desktop/README.txt
       - mkdir -p /usr/share/wordlists
       - |
-        cat > /usr/share/wordlists/cloud-common.txt << 'WLIST'
-        password
-        123456
-        admin
-        letmein
-        welcome
-        monkey
-        master
-        dragon
-        login
-        abc123
-        admin123
-        root
-        toor
-        pass
-        test
-        guest
-        access
-        iloveyou
-        1234567890
-        trustno1
-        changeme
-        P@ssw0rd
-        P@ss1234
-        Password1
-        Password123!
-        Welcome2025!
-        Admin@1234
-        Summer2025!
-        Backup123!
-        Service1!
-        Passw0rd!
-        Azure2025!
-        Deploy123!
-        Qwerty@123
-        Winter2024!
-        Autumn2025!
-        Spring2025!
-        Monday01!
-        Server2025!
-        Database1!
-        Network1!
-        Cloud123!
-        DevOps2025!
-        Secure@123
-        Company1!
-        Support1!
-        Helpdesk1!
-        Manager1!
-        System@123
-        Testing123!
-        WLIST
-      - sed -i 's/^[[:space:]]*//' /usr/share/wordlists/cloud-common.txt
-      - sed -i '/^$/d' /usr/share/wordlists/cloud-common.txt
+        python3 -c "
+        import re
+        src = '/usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt'
+        with open(src) as f:
+            pws = [l.strip() for l in f if l.strip()]
+        out = [p for p in pws if len(p) >= 6 and sum([
+            bool(re.search(r'[a-z]', p)),
+            bool(re.search(r'[A-Z]', p)),
+            bool(re.search(r'[0-9]', p)),
+            bool(re.search(r'[^a-zA-Z0-9]', p)),
+        ]) >= 3]
+        with open('/usr/share/wordlists/azure-passwords.txt', 'w') as f:
+            f.write('\n'.join(out) + '\n')
+        print(f'Filtered {len(out)} Azure-compatible passwords from {len(pws)}')
+        "
   EOF
   )
 

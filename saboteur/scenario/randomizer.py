@@ -12,11 +12,15 @@ USERNAMES = [
     "db_reader", "func_runner", "blob_writer", "kv_reader", "infra_bot",
 ]
 
-# Weak passwords for entry-point modules — brute-forceable with hydra/wordlists
+# Weak passwords for entry-point modules — every password here is verified to
+# exist in the NCSC 100k-most-used-passwords list (via SecLists) and meets
+# Azure VM complexity requirements (3-of-4: lowercase, uppercase, digit, special).
+# The filtered wordlist is shipped on the Kali box at
+# /usr/share/wordlists/azure-passwords.txt so players can brute-force with hydra.
 WEAK_PASSWORDS = [
-    "Password123!", "Welcome2025!", "Admin@1234", "Summer2025!",
-    "Backup123!", "Service1!", "Passw0rd!", "Azure2025!",
-    "Deploy123!", "Qwerty@123",
+    "Password1", "Passw0rd", "Welcome1", "Password123",
+    "Qwerty123", "Pa55word", "Letmein1", "Password01",
+    "Welcome123", "Admin123",
 ]
 
 
