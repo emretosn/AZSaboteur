@@ -117,9 +117,68 @@ resource "azurerm_linux_virtual_machine" "this" {
           nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
           metasploit, burpsuite, responder, aircrack-ng
 
+        WORDLISTS
+          /usr/share/wordlists/cloud-common.txt  (passwords)
+
         Good luck, operator.
         MOTD
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/Desktop/README.txt
+      - mkdir -p /usr/share/wordlists
+      - |
+        cat > /usr/share/wordlists/cloud-common.txt << 'WLIST'
+        password
+        123456
+        admin
+        letmein
+        welcome
+        monkey
+        master
+        dragon
+        login
+        abc123
+        admin123
+        root
+        toor
+        pass
+        test
+        guest
+        access
+        iloveyou
+        1234567890
+        trustno1
+        changeme
+        P@ssw0rd
+        P@ss1234
+        Password1
+        Password123!
+        Welcome2025!
+        Admin@1234
+        Summer2025!
+        Backup123!
+        Service1!
+        Passw0rd!
+        Azure2025!
+        Deploy123!
+        Qwerty@123
+        Winter2024!
+        Autumn2025!
+        Spring2025!
+        Monday01!
+        Server2025!
+        Database1!
+        Network1!
+        Cloud123!
+        DevOps2025!
+        Secure@123
+        Company1!
+        Support1!
+        Helpdesk1!
+        Manager1!
+        System@123
+        Testing123!
+        WLIST
+      - sed -i 's/^[[:space:]]*//' /usr/share/wordlists/cloud-common.txt
+      - sed -i '/^$/d' /usr/share/wordlists/cloud-common.txt
   EOF
   )
 

@@ -1,6 +1,10 @@
 # Exposed management port — VM with SSH directly accessible from the lab subnet.
 # The player uses discovered credentials to log in via SSH.
 
+locals {
+  admin_user = var.credentials["step_${var.step_index}_username"]
+}
+
 resource "azurerm_network_interface" "this" {
   name                = "nic-${var.resource_prefix}"
   location            = var.region
@@ -88,6 +92,17 @@ resource "azurerm_linux_virtual_machine" "this" {
     mkdir -p /opt/azsaboteur
     echo '${var.flag}' > /opt/azsaboteur/flag.txt
     chmod 600 /opt/azsaboteur/flag.txt
+    printf '%s\n' \
+      '************************************************************' \
+      '  CONTOSO LABS - Deployment Gateway' \
+      '  Authorized access only. All sessions are monitored.' \
+      '' \
+      '  System account : ${local.admin_user}' \
+      '  Support contact: ${local.admin_user}@contoso-labs.com' \
+      '  Managed by     : ops-team@contoso-labs.com' \
+      '************************************************************' > /etc/ssh/banner
+    sed -i 's/^#\?Banner.*/Banner \/etc\/ssh\/banner/' /etc/ssh/sshd_config
+    systemctl restart ssh || systemctl restart sshd
   CLOUD
   )
 

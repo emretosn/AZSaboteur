@@ -6,6 +6,34 @@
     mode: "0755"
   become: true
 
+- name: Create SSH banner that leaks the service account username
+  ansible.builtin.copy:
+    dest: /etc/ssh/banner
+    mode: "0644"
+    content: |
+      ************************************************************
+        CONTOSO LABS - Deployment Gateway
+        Authorized access only. All sessions are monitored.
+
+        System account : {{ admin_username }}
+        Support contact: {{ admin_username }}@contoso-labs.com
+        Managed by     : ops-team@contoso-labs.com
+      ************************************************************
+  become: true
+
+- name: Enable SSH banner in sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Banner'
+    line: 'Banner /etc/ssh/banner'
+  become: true
+
+- name: Restart SSH to apply banner
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+  become: true
+
 - name: Plant cloud credentials breadcrumb
   ansible.builtin.copy:
     dest: "/home/{{ admin_username }}/.cloud-credentials"
