@@ -9,7 +9,7 @@ import time
 
 from saboteur.utils.output import console, print_error, print_success, print_warning
 
-DEFAULT_TIMEOUT = 900  # 15 minutes
+DEFAULT_TIMEOUT = 1800  # 30 minutes — Kali cloud-init installs heavy packages
 POLL_INTERVAL = 20  # seconds between checks
 
 

@@ -128,5 +128,12 @@ class AnsibleRunner:
             return True
         print_error(f"Playbook {playbook} failed")
         if not self.verbose and hasattr(result, "stderr") and result.stderr:
-            print_error(result.stderr[-500:])
+            # Filter out harmless "no hosts matched" warnings
+            lines = [
+                line for line in result.stderr.splitlines()
+                if "Could not match supplied host pattern" not in line
+                and line.strip()
+            ]
+            if lines:
+                print_error("\n".join(lines[-20:]))
         return False

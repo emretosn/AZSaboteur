@@ -223,13 +223,14 @@ def deploy(
 
     # Wait for Kali cloud-init to finish (installs SSH, xRDP, tools).
     # Must complete before Ansible can use Kali as an SSH jump host.
+    kali_ready = True
     if not image:
         rg_name = f"rg-{scenario.scenario_id}"
         vm_name = f"vm-kali-{scenario.scenario_id}"
-        wait_for_rdp(rg_name, vm_name)
+        kali_ready = wait_for_rdp(rg_name, vm_name)
 
     # --- Phase 2: Ansible provisioning ---
-    if chain_data:
+    if chain_data and kali_ready:
         chain_steps = []
         for i, node_id in enumerate(scenario.graph.topo_order()):
             module = scenario.graph.get_module(node_id)
@@ -257,6 +258,15 @@ def deploy(
         else:
             deployment.status = "deployed"
             state.add(deployment)
+    elif chain_data and not kali_ready:
+        deployment.status = "deployed"
+        state.add(deployment)
+        print_warning(
+            "Kali box not ready — skipped Ansible provisioning.\n"
+            "Once the Kali box finishes booting, re-run Ansible manually:\n"
+            "  ANSIBLE_CONFIG=ansible/ansible.cfg .venv/bin/ansible-playbook "
+            "ansible/playbooks/site.yml -i ansible/inventory/hosts.yml"
+        )
     else:
         deployment.status = "deployed"
         state.add(deployment)
