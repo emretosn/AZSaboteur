@@ -7,6 +7,9 @@ resource "azurerm_cosmosdb_account" "this" {
   resource_group_name = var.resource_group_name
   offer_type          = "Standard"
 
+  # Disable zone redundancy — avoids capacity limits in popular regions
+  is_virtual_network_filter_enabled = false
+
   consistency_policy {
     consistency_level = "Session"
   }
@@ -14,6 +17,7 @@ resource "azurerm_cosmosdb_account" "this" {
   geo_location {
     location          = var.region
     failover_priority = 0
+    zone_redundant    = false
   }
 
   tags = {
