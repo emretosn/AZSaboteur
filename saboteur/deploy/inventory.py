@@ -98,6 +98,8 @@ def generate_inventory(
                     "ansible_host": private_ip,
                     "ansible_user": username,
                     "ansible_password": password,
+                    "ansible_become_password": password,
+                    "ansible_python_interpreter": "/usr/bin/python3",
                     "ansible_ssh_common_args": (
                         f'-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
                         f'-o ProxyCommand="{proxy_cmd}"'
