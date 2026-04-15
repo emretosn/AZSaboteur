@@ -54,7 +54,7 @@ def _check_rdp_ready(resource_group: str, vm_name: str) -> bool:
 def wait_for_ssh(
     host: str,
     port: int = 22,
-    timeout: int = 300,
+    timeout: int = 600,
 ) -> bool:
     """Block until SSH is reachable on the given host, showing a spinner.
 

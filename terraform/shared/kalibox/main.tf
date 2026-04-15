@@ -88,7 +88,9 @@ resource "azurerm_linux_virtual_machine" "this" {
     package_update: true
     runcmd:
       - export DEBIAN_FRONTEND=noninteractive
-      - apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11
+      - apt-get install -y -qq openssh-server xrdp xfce4 xfce4-goodies dbus-x11
+      - systemctl enable ssh
+      - systemctl start ssh
       - echo 'xfce4-session' > /home/${var.admin_username}/.xsession
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
       - systemctl enable xrdp
