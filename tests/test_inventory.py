@@ -78,6 +78,7 @@ class TestGenerateInventory:
         assert host["ansible_password"] == "P@ss1234!"
         assert "ProxyCommand" in host["ansible_ssh_common_args"]
         assert "20.0.0.1" in host["ansible_ssh_common_args"]
+        assert "sshpass -f" in host["ansible_ssh_common_args"]
 
     def test_non_vm_host_uses_local_connection(self, tmp_path, monkeypatch):
         monkeypatch.setattr("saboteur.deploy.inventory.ANSIBLE_DIR", tmp_path)

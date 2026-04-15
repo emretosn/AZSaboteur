@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,13 @@ def generate_inventory(
     kali_ip = _extract_tf_value(tf_outputs.get("kali_public_ip", ""))
     chain_outputs = _extract_tf_value(tf_outputs.get("chain_outputs", {}))
 
+    # Write the Kali SSH password to a file so sshpass -f avoids shell escaping issues
+    inventory_dir = ANSIBLE_DIR / "inventory"
+    inventory_dir.mkdir(parents=True, exist_ok=True)
+    kali_pass_file = inventory_dir / ".kali_pass"
+    kali_pass_file.write_text(kali_password)
+    kali_pass_file.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
+
     children: dict[str, Any] = {}
 
     for step in chain_steps:
@@ -81,7 +89,7 @@ def generate_inventory(
             username = credentials.get(f"step_{idx}_username", "")
             password = credentials.get(f"step_{idx}_password", "")
             proxy_cmd = (
-                f"sshpass -p '{kali_password}' ssh "
+                f"sshpass -f {kali_pass_file} ssh "
                 f"-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
                 f"-W %h:%p kali@{kali_ip}"
             )

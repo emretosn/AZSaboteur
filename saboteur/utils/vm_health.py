@@ -1,8 +1,9 @@
-"""Post-deploy VM health checks — polls until the Kali box is ready for RDP."""
+"""Post-deploy VM health checks — polls until VMs are ready."""
 
 from __future__ import annotations
 
 import json
+import socket
 import subprocess
 import time
 
@@ -48,6 +49,45 @@ def _check_rdp_ready(resource_group: str, vm_name: str) -> bool:
     cloud_init_finished = "status: done" in output or "status: error" in output
     xrdp_active = output.split("---")[-1].strip().startswith("active")
     return cloud_init_finished and xrdp_active
+
+
+def wait_for_ssh(
+    host: str,
+    port: int = 22,
+    timeout: int = 300,
+) -> bool:
+    """Block until SSH is reachable on the given host, showing a spinner.
+
+    Uses a simple TCP connect check.  Returns True if reachable, False on timeout.
+    """
+    start = time.monotonic()
+
+    with console.status(
+        f"[bold blue]Waiting for SSH on {host}:{port}...",
+        spinner="dots",
+        spinner_style="blue",
+    ):
+        while True:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                break
+
+            try:
+                with socket.create_connection((host, port), timeout=5):
+                    minutes, seconds = divmod(int(elapsed), 60)
+                    time_str = f"{minutes}m{seconds:02d}s" if minutes else f"{seconds}s"
+                    print_success(f"SSH reachable on {host} (took {time_str})")
+                    return True
+            except (socket.timeout, ConnectionRefusedError, OSError):
+                pass
+
+            remaining = timeout - elapsed
+            sleep_time = min(10, remaining)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+    print_warning(f"SSH on {host} not reachable after {timeout}s — Ansible may fail to connect.")
+    return False
 
 
 def wait_for_rdp(

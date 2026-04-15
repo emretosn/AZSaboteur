@@ -18,7 +18,7 @@ from saboteur.modules.catalog import load_catalog
 from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
 from saboteur.utils.azure_auth import accept_kali_terms, get_subscription_id
-from saboteur.utils.vm_health import wait_for_rdp
+from saboteur.utils.vm_health import wait_for_rdp, wait_for_ssh
 from saboteur.utils.output import (
     console as out,
     print_banner,
@@ -223,6 +223,9 @@ def deploy(
 
     # --- Phase 2: Ansible provisioning ---
     if chain_data:
+        # Wait for Kali box SSH to be reachable (needed as jump host)
+        wait_for_ssh(kali_ip)
+
         chain_steps = []
         for i, node_id in enumerate(scenario.graph.topo_order()):
             module = scenario.graph.get_module(node_id)
