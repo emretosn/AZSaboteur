@@ -75,7 +75,7 @@ class TestGenerateInventory:
         host = inv["all"]["children"]["vulnerable_flask_app"]["hosts"]["step_0"]
         assert host["ansible_host"] == "10.13.37.20"
         assert host["ansible_user"] == "svc_deploy"
-        assert host["ansible_password"] == "P@ss1234!"
+        assert host["ansible_ssh_pass"] == "P@ss1234!"
         assert "ProxyCommand" in host["ansible_ssh_common_args"]
         assert "20.0.0.1" in host["ansible_ssh_common_args"]
         assert "sshpass -f" in host["ansible_ssh_common_args"]
