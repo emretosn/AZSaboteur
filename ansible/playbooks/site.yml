@@ -50,45 +50,63 @@
 # --- Azure-API-only modules (localhost / no-ops) ---
 - name: Provision VM run-command module
   hosts: vm_runcommand
+  become: false
+  gather_facts: false
   roles:
     - vm-runcommand
 
 - name: Provision Key Vault module
   hosts: keyvault_lax
+  become: false
+  gather_facts: false
   roles:
     - keyvault-lax
 
 - name: Provision public blob module
   hosts: public_blob
+  become: false
+  gather_facts: false
   roles:
     - public-blob
 
 - name: Provision Cosmos DB module
   hosts: cosmosdb_key
+  become: false
+  gather_facts: false
   roles:
     - cosmosdb-key
 
 - name: Provision SAS token module
   hosts: sas_token
+  become: false
+  gather_facts: false
   roles:
     - sas-token
 
 - name: Provision over-privileged SP module
   hosts: overperm_sp
+  become: false
+  gather_facts: false
   roles:
     - overperm-sp
 
 - name: Provision app registration module
   hosts: appreg_secret
+  become: false
+  gather_facts: false
   roles:
     - appreg-secret
 
 - name: Provision function app module
   hosts: function_app_env
+  become: false
+  gather_facts: false
   roles:
     - function-app-env
 
 - name: Provision automation runbook module
   hosts: automation_runbook
+  become: false
+  gather_facts: false
   roles:
     - automation-runbook
