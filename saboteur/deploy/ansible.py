@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -93,11 +94,14 @@ class AnsibleRunner:
             args.append("-vv")
             print_info(f"Running: {' '.join(args)}")
 
+        env = {**os.environ, "ANSIBLE_CONFIG": str(self.working_dir / "ansible.cfg")}
+
         try:
             if self.verbose:
                 result = subprocess.run(
                     args,
                     cwd=self.working_dir,
+                    env=env,
                     stdout=sys.stdout,
                     stderr=sys.stderr,
                     text=True,
@@ -109,7 +113,8 @@ class AnsibleRunner:
                     spinner_style="blue",
                 ):
                     result = subprocess.run(
-                        args, cwd=self.working_dir, capture_output=True, text=True,
+                        args, cwd=self.working_dir, env=env,
+                        capture_output=True, text=True,
                     )
         except FileNotFoundError:
             print_error(
