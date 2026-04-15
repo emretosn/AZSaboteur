@@ -7,8 +7,10 @@ resource "azurerm_cosmosdb_account" "this" {
   resource_group_name = var.resource_group_name
   offer_type          = "Standard"
 
-  # Disable zone redundancy — avoids capacity limits in popular regions
-  is_virtual_network_filter_enabled = false
+  # Serverless avoids availability zone capacity limits and is cheaper for labs
+  capabilities {
+    name = "EnableServerless"
+  }
 
   consistency_policy {
     consistency_level = "Session"
