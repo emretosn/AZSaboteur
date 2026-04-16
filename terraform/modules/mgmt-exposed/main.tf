@@ -102,6 +102,11 @@ resource "azurerm_linux_virtual_machine" "this" {
       '  Managed by     : ops-team@contoso-labs.com' \
       '************************************************************' > /etc/ssh/banner
     sed -i 's/^#\?Banner.*/Banner \/etc\/ssh\/banner/' /etc/ssh/sshd_config
+    # Allow brute-force attacks for the lab exercise
+    sed -i 's/^#\?MaxAuthTries.*/MaxAuthTries 100/' /etc/ssh/sshd_config
+    sed -i 's/^#\?MaxStartups.*/MaxStartups 100:30:200/' /etc/ssh/sshd_config
+    sed -i 's/^#\?LoginGraceTime.*/LoginGraceTime 120/' /etc/ssh/sshd_config
+    systemctl stop fail2ban 2>/dev/null; systemctl disable fail2ban 2>/dev/null
     systemctl restart ssh || systemctl restart sshd
   CLOUD
   )

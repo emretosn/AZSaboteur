@@ -28,7 +28,36 @@
     line: 'Banner /etc/ssh/banner'
   become: true
 
-- name: Restart SSH to apply banner
+- name: Raise MaxAuthTries to allow brute-force exercises
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?MaxAuthTries'
+    line: 'MaxAuthTries 100'
+  become: true
+
+- name: Raise MaxStartups to handle parallel hydra connections
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?MaxStartups'
+    line: 'MaxStartups 100:30:200'
+  become: true
+
+- name: Set generous LoginGraceTime
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?LoginGraceTime'
+    line: 'LoginGraceTime 120'
+  become: true
+
+- name: Disable fail2ban to prevent lockouts during brute-force
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: false
+    state: stopped
+  become: true
+  ignore_errors: true
+
+- name: Restart SSH to apply banner and connection settings
   ansible.builtin.systemd:
     name: ssh
     state: restarted
