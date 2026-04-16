@@ -126,36 +126,12 @@ resource "azurerm_linux_virtual_machine" "this" {
           nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
           metasploit, burpsuite, responder, aircrack-ng
 
-        WORDLISTS
-          /usr/share/wordlists/azure-passwords.txt  (Azure-filtered passwords)
-          /usr/share/seclists/                       (full SecLists collection)
-
-        HINT
-          Azure VMs require passwords with 3-of-4: lowercase, uppercase,
-          digit, special character. The azure-passwords.txt wordlist is
-          pre-filtered from the NCSC 100k most-used passwords list for
-          passwords that meet this policy.
+        WORDLISTS (via SecLists)
+          /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
 
         Good luck, operator.
         MOTD
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/Desktop/README.txt
-      - mkdir -p /usr/share/wordlists
-      - |
-        python3 -c "
-        import re
-        src = '/usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt'
-        with open(src) as f:
-            pws = [l.strip() for l in f if l.strip()]
-        out = [p for p in pws if len(p) >= 6 and sum([
-            bool(re.search(r'[a-z]', p)),
-            bool(re.search(r'[A-Z]', p)),
-            bool(re.search(r'[0-9]', p)),
-            bool(re.search(r'[^a-zA-Z0-9]', p)),
-        ]) >= 3]
-        with open('/usr/share/wordlists/azure-passwords.txt', 'w') as f:
-            f.write('\n'.join(out) + '\n')
-        print(f'Filtered {len(out)} Azure-compatible passwords from {len(pws)}')
-        "
   EOF
   )
 

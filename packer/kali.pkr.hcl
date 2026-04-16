@@ -81,27 +81,6 @@ build {
       "echo '=== Installing Kali top 10 tools ==='",
       "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists",
 
-      "echo '=== Generating Azure-filtered password wordlist ==='",
-      "sudo mkdir -p /usr/share/wordlists",
-      <<-SCRIPT
-      sudo python3 -c "
-      import re
-      src = '/usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt'
-      with open(src) as f:
-          pws = [l.strip() for l in f if l.strip()]
-      out = [p for p in pws if len(p) >= 6 and sum([
-          bool(re.search(r'[a-z]', p)),
-          bool(re.search(r'[A-Z]', p)),
-          bool(re.search(r'[0-9]', p)),
-          bool(re.search(r'[^a-zA-Z0-9]', p)),
-      ]) >= 3]
-      with open('/usr/share/wordlists/azure-passwords.txt', 'w') as f:
-          f.write('\n'.join(out) + '\n')
-      print(f'Filtered {len(out)} Azure-compatible passwords from {len(pws)}')
-      "
-      SCRIPT
-      ,
-
       "echo '=== Configuring xRDP ==='",
       "sudo systemctl enable xrdp",
 
