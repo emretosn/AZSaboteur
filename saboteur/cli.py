@@ -182,6 +182,7 @@ def deploy(
         print_info("Infra-only mode — deploying Kali box and networking only")
     print_info(f"Scenario ID: {scenario.scenario_id}")
 
+    ubuntu_fallback = False
     if not image:
         if not accept_kali_terms():
             print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
@@ -210,13 +211,36 @@ def deploy(
     state.add(deployment)
 
     if not tf.apply(var_file=var_file):
-        deployment.status = "failed"
-        state.add(deployment)
-        print_warning(
-            f"Deployment {scenario.scenario_id} failed. "
-            f"Run 'saboteur destroy {scenario.scenario_id}' to clean up."
-        )
-        raise typer.Exit(1)
+        if not image:
+            # Kali marketplace images fail intermittently on some Azure subscriptions
+            # (managed environments, marketplace purchase restrictions, propagation
+            # delays for plan acceptance). Retry with an Ubuntu base image — the
+            # cloud-init installs the same tools (nmap, hydra, seclists, etc.).
+            print_warning(
+                "Kali marketplace deployment failed — this is usually caused by Azure\n"
+                "marketplace purchase restrictions on your subscription. Retrying with\n"
+                "an Ubuntu base image (same tools will be installed via cloud-init)..."
+            )
+            ubuntu_fallback = True
+            tf_vars["kali_use_ubuntu_fallback"] = True
+            var_file = tf.write_var_file(tf_vars)
+            tf.destroy(var_file=var_file)
+            if not tf.apply(var_file=var_file):
+                deployment.status = "failed"
+                state.add(deployment)
+                print_warning(
+                    f"Deployment {scenario.scenario_id} failed. "
+                    f"Run 'saboteur destroy {scenario.scenario_id}' to clean up."
+                )
+                raise typer.Exit(1)
+        else:
+            deployment.status = "failed"
+            state.add(deployment)
+            print_warning(
+                f"Deployment {scenario.scenario_id} failed. "
+                f"Run 'saboteur destroy {scenario.scenario_id}' to clean up."
+            )
+            raise typer.Exit(1)
 
     tf_outputs = tf.output()
     kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "<pending>")
@@ -274,16 +298,26 @@ def deploy(
     kali_user = scenario.kali_credentials["username"]
     kali_pass = scenario.kali_credentials["password"]
     print_success("Deployment complete!")
+    if ubuntu_fallback:
+        print_warning(
+            "The attack box is running Ubuntu instead of Kali Linux because the Kali\n"
+            "marketplace image could not be purchased on this Azure subscription. All\n"
+            "the same pentesting tools (nmap, hydra, seclists, etc.) are being installed\n"
+            "via cloud-init. To use Kali natively, build a golden image with:\n"
+            "  cd packer && packer build kali.pkr.hcl\n"
+            "  saboteur deploy --image <image_resource_id>"
+        )
+    box_label = "Ubuntu attack box" if ubuntu_fallback else "Kali box"
     conn_cmd = f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:'{kali_pass}' /cert:ignore"
     if chain_data:
         print_mission_briefing(
-            target=f"{kali_ip} (Kali box)",
+            target=f"{kali_ip} ({box_label})",
             objective="Scan the network from the Kali box, exploit the chain, and find the flags.",
             connection_info=conn_cmd,
         )
     else:
         print_mission_briefing(
-            target=f"{kali_ip} (Kali box)",
+            target=f"{kali_ip} ({box_label})",
             objective="Infra-only deployment — no attack chain. Use this environment for testing.",
             connection_info=conn_cmd,
         )

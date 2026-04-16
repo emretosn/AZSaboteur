@@ -38,6 +38,12 @@ variable "kali_custom_image_id" {
   default     = ""
 }
 
+variable "kali_use_ubuntu_fallback" {
+  description = "Use Ubuntu instead of Kali marketplace image. Automatic fallback when marketplace purchase fails."
+  type        = bool
+  default     = false
+}
+
 variable "chain" {
   description = "Attack chain module configuration (passed from scenario engine)"
   type        = any

@@ -35,8 +35,17 @@ variable "custom_image_id" {
   description = "Resource ID of a pre-built Kali image. When set, skips cloud-init provisioning and marketplace plan."
 }
 
+variable "use_ubuntu_fallback" {
+  type        = bool
+  default     = false
+  description = "Use Ubuntu instead of Kali marketplace image. Enables automatic fallback when marketplace purchase fails."
+}
+
 locals {
   use_custom_image = var.custom_image_id != ""
+  # Three mutually exclusive image modes
+  use_kali_marketplace = !local.use_custom_image && !var.use_ubuntu_fallback
+  use_ubuntu_fallback  = !local.use_custom_image && var.use_ubuntu_fallback
 }
 
 resource "azurerm_public_ip" "this" {
@@ -82,7 +91,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   disable_password_authentication = false
   network_interface_ids           = [azurerm_network_interface.this.id]
 
-  # Only run cloud-init when using the marketplace image (no pre-built image)
+  # Cloud-init runs when NOT using a pre-built Kali golden image (i.e. marketplace or Ubuntu fallback)
   custom_data = local.use_custom_image ? null : base64encode(<<-EOF
     #cloud-config
     package_update: true
@@ -159,9 +168,9 @@ resource "azurerm_linux_virtual_machine" "this" {
   # Custom image: use source_image_id
   source_image_id = local.use_custom_image ? var.custom_image_id : null
 
-  # Marketplace image: use source_image_reference + plan
+  # Marketplace Kali image: used when no custom image and no Ubuntu fallback
   dynamic "source_image_reference" {
-    for_each = local.use_custom_image ? [] : [1]
+    for_each = local.use_kali_marketplace ? [1] : []
     content {
       publisher = "kali-linux"
       offer     = "kali"
@@ -171,11 +180,22 @@ resource "azurerm_linux_virtual_machine" "this" {
   }
 
   dynamic "plan" {
-    for_each = local.use_custom_image ? [] : [1]
+    for_each = local.use_kali_marketplace ? [1] : []
     content {
       name      = "kali-2025-2"
       publisher = "kali-linux"
       product   = "kali"
+    }
+  }
+
+  # Ubuntu fallback image: used when Kali marketplace purchase fails
+  dynamic "source_image_reference" {
+    for_each = local.use_ubuntu_fallback ? [1] : []
+    content {
+      publisher = "Canonical"
+      offer     = "0001-com-ubuntu-server-jammy"
+      sku       = "22_04-lts-gen2"
+      version   = "latest"
     }
   }
 
