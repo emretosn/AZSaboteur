@@ -57,12 +57,6 @@
   become: true
   ignore_errors: true
 
-- name: Restart SSH to apply banner and connection settings
-  ansible.builtin.systemd:
-    name: ssh
-    state: restarted
-  become: true
-
 - name: Plant cloud credentials breadcrumb
   ansible.builtin.copy:
     dest: "/home/{{ admin_username }}/.cloud-credentials"
@@ -117,4 +111,12 @@
       az vm run-command invoke -g lab-rg -n lab-vm --command-id RunShellScript --scripts "whoami"
       cat ~/.cloud-credentials
       history -c
+  become: true
+
+# Restart SSH last — this drops the active Ansible SSH connection, so
+# nothing can run after this task over the same connection.
+- name: Restart SSH to apply banner and connection settings
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
   become: true
