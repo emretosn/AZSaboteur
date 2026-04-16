@@ -6,56 +6,11 @@
     mode: "0755"
   become: true
 
-- name: Create SSH banner that leaks the service account username
-  ansible.builtin.copy:
-    dest: /etc/ssh/banner
-    mode: "0644"
-    content: |
-      ************************************************************
-        CONTOSO LABS - Deployment Gateway
-        Authorized access only. All sessions are monitored.
-
-        System account : {{ admin_username }}
-        Support contact: {{ admin_username }}@contoso-labs.com
-        Managed by     : ops-team@contoso-labs.com
-      ************************************************************
-  become: true
-
-- name: Enable SSH banner in sshd_config
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?Banner'
-    line: 'Banner /etc/ssh/banner'
-  become: true
-
-- name: Raise MaxAuthTries to allow brute-force exercises
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?MaxAuthTries'
-    line: 'MaxAuthTries 100'
-  become: true
-
-- name: Raise MaxStartups to handle parallel hydra connections
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?MaxStartups'
-    line: 'MaxStartups 100:30:200'
-  become: true
-
-- name: Set generous LoginGraceTime
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?LoginGraceTime'
-    line: 'LoginGraceTime 120'
-  become: true
-
-- name: Disable fail2ban to prevent lockouts during brute-force
-  ansible.builtin.systemd:
-    name: fail2ban
-    enabled: false
-    state: stopped
-  become: true
-  ignore_errors: true
+# SSH banner and sshd hardening (MaxAuthTries, MaxStartups, fail2ban)
+# are configured by Terraform cloud-init at VM creation time so they
+# are in place before Ansible connects. We do NOT touch sshd here
+# because sshpass (used for the SSH proxy connection through Kali)
+# misinterprets the pre-auth banner text and drops the connection.
 
 - name: Plant cloud credentials breadcrumb
   ansible.builtin.copy:
@@ -111,12 +66,4 @@
       az vm run-command invoke -g lab-rg -n lab-vm --command-id RunShellScript --scripts "whoami"
       cat ~/.cloud-credentials
       history -c
-  become: true
-
-# Restart SSH last — this drops the active Ansible SSH connection, so
-# nothing can run after this task over the same connection.
-- name: Restart SSH to apply banner and connection settings
-  ansible.builtin.systemd:
-    name: ssh
-    state: restarted
   become: true
