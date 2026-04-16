@@ -20,8 +20,8 @@ USERNAMES = [
 # everything) and meet Azure VM password policy (3-of-4 character classes:
 # these use lowercase + digits + special characters).
 WEAK_PASSWORDS = [
-    "p@ssw0rd", "!qaz2wsx", "abc123!", "password1!",
-    "pass@123", "abc@123", "p@$$w0rd", "pass_2011",
+    "password1!", "p@ssw0rd", "abc123!", "pass@123",
+    "abc@123", "!qaz2wsx", "p@$$w0rd", "pass_2011",
     "pa$$w0rd", "password@123",
 ]
 
