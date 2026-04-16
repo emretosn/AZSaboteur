@@ -12,15 +12,17 @@ USERNAMES = [
     "db_reader", "func_runner", "blob_writer", "kv_reader", "infra_bot",
 ]
 
-# Weak passwords for entry-point modules — every password here is verified to
-# exist in the NCSC 100k-most-used-passwords list (via SecLists). Players use
-# hydra with the raw NCSC list at:
+# Weak passwords for entry-point modules — every password here exists in the
+# NCSC 100k-most-used-passwords list shipped with the SecLists apt package on
+# Kali. Players brute-force with hydra using the raw NCSC list at:
 #   /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
-# All passwords also meet Azure VM complexity (3-of-4: lower, upper, digit, special).
+# All passwords are lowercase-safe (the apt-packaged SecLists lowercases
+# everything) and meet Azure VM password policy (3-of-4 character classes:
+# these use lowercase + digits + special characters).
 WEAK_PASSWORDS = [
-    "Password1", "Passw0rd", "Welcome1", "Password123",
-    "Qwerty123", "Pa55word", "Letmein1", "Password01",
-    "Welcome123", "Admin123",
+    "p@ssw0rd", "!qaz2wsx", "abc123!", "password1!",
+    "pass@123", "abc@123", "p@$$w0rd", "pass_2011",
+    "pa$$w0rd", "password@123",
 ]
 
 
