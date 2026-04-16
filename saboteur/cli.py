@@ -493,6 +493,119 @@ def validate(
 
 
 # ---------------------------------------------------------------------------
+# reprovision
+# ---------------------------------------------------------------------------
+
+@app.command()
+def reprovision(
+    ctx: typer.Context,
+    instance: Optional[str] = typer.Argument(None, help="Scenario ID to reprovision"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream Ansible output"),
+) -> None:
+    """Re-run Ansible provisioning on an existing deployment.
+
+    Use this after changing Ansible roles, flags, or credentials without
+    tearing down and redeploying the entire scenario. Much faster than a
+    full destroy/deploy cycle (~1-2 min vs ~30 min).
+    """
+    state = StateManager()
+
+    if instance is None and not _has_explicit_flags(ctx):
+        deployments = state.active
+        if not deployments:
+            print_info("No active deployments to reprovision")
+            return
+        if len(deployments) == 1:
+            instance = deployments[0].scenario_id
+        else:
+            from saboteur.utils.prompts import prompt_destroy_instance
+            cfg = prompt_destroy_instance()
+            instance = cfg["instance"]
+            verbose = cfg.get("verbose", verbose)
+            if not instance:
+                return
+
+    if not instance:
+        print_error("No scenario ID provided. Usage: saboteur reprovision <SCENARIO_ID>")
+        raise typer.Exit(1)
+
+    deployment = state.get(instance)
+    if not deployment:
+        print_error(f"No deployment found with ID: {instance}")
+        raise typer.Exit(1)
+
+    if deployment.status != "deployed":
+        print_error(f"Deployment {instance} is in '{deployment.status}' state — can only reprovision deployed scenarios")
+        raise typer.Exit(1)
+
+    if not deployment.chain:
+        print_info("Infra-only deployment — nothing to reprovision")
+        return
+
+    print_info(f"Reprovisioning {instance}...")
+
+    # Get Terraform outputs from the live workspace
+    tf = TerraformRunner(verbose=verbose, scenario_id=instance)
+    if not tf.init():
+        raise typer.Exit(1)
+    tf_outputs = tf.output()
+
+    if not tf_outputs:
+        print_error("Could not read Terraform outputs — is the infrastructure still deployed?")
+        raise typer.Exit(1)
+
+    # Load module catalog to resolve ansible_role for each chain step
+    catalog = load_catalog(MODULES_DIR)
+
+    chain_steps = []
+    for i, module_id in enumerate(deployment.chain):
+        module = catalog.get(module_id)
+        if not module:
+            print_error(f"Module '{module_id}' not found in catalog")
+            raise typer.Exit(1)
+        chain_steps.append({
+            "step": i,
+            "module_id": module.id,
+            "ansible_role": module.ansible_role,
+        })
+
+    # Re-generate credentials and flags from the stored deployment state
+    # Flags come from deployment state; credentials come from the tfvars file
+    tf_runner = TerraformRunner(scenario_id=instance)
+    var_file = tf_runner.working_dir / "scenario.auto.tfvars.json"
+    if not var_file.exists():
+        print_error(f"Variable file not found: {var_file}\nCannot recover credentials — a full redeploy is needed.")
+        raise typer.Exit(1)
+
+    with open(var_file) as f:
+        tf_vars = json.load(f)
+
+    credentials = tf_vars.get("credentials", {})
+    flags = tf_vars.get("flags", {})
+    kali_password = tf_vars.get("kali_admin_password", "")
+
+    if not kali_password:
+        print_error("Could not recover Kali password from tfvars — a full redeploy is needed.")
+        raise typer.Exit(1)
+
+    ansible = AnsibleRunner(verbose=verbose)
+    if ansible.provision_scenario(
+        tf_outputs=tf_outputs,
+        chain_steps=chain_steps,
+        credentials=credentials,
+        flags=flags,
+        kali_password=kali_password,
+    ):
+        print_success(f"Reprovisioning complete for {instance}")
+    else:
+        print_warning(
+            "Ansible provisioning failed. Check the target VMs are still running.\n"
+            "Use -v for verbose output to debug."
+        )
+        raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
 # list-modules
 # ---------------------------------------------------------------------------
 
