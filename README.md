@@ -45,16 +45,16 @@ pip install -e ".[dev]"  # or: uv sync
 
 ```bash
 # Interactive mode — guided prompts
-saboteur deploy
+uv run saboteur deploy
 
 # Scripted mode — deploy a 3-step chain
-saboteur deploy --chain-length 3 --region westeurope
+uv run saboteur deploy --chain-length 3 --region westeurope
 
 # Infra-only (just Kali box, no attack chain)
-saboteur deploy --chain-length 0
+uv run saboteur deploy --chain-length 0
 
 # Destroy when done
-saboteur destroy
+uv run saboteur destroy
 ```
 
 ---
@@ -79,8 +79,8 @@ saboteur destroy
 ┌─────────────────────────────────────────────────┐
 │  saboteur CLI (Python)                          │
 │  ┌──────────────┐  ┌─────────────────────────┐  │
-│  │ Scenario     │  │ Module Catalog           │  │
-│  │ Engine       │──│ (modules/*.yaml)         │  │
+│  │ Scenario     │  │ Module Catalog          │  │
+│  │ Engine       │──│ (modules/*.yaml)        │  │
 │  └──────┬───────┘  └─────────────────────────┘  │
 │         │                                       │
 │  ┌──────▼───────┐  ┌─────────────────────────┐  │
@@ -94,7 +94,7 @@ saboteur destroy
 ┌─────────────────┐  ┌─────────────────────────┐
 │ Azure Resources │  │ Vulnerable Services     │
 │ (VMs, KV, Blob) │  │ (Flask apps, nginx,     │
-│                 │  │  planted secrets)        │
+│                 │  │  planted secrets)       │
 └─────────────────┘  └─────────────────────────┘
 ```
 
