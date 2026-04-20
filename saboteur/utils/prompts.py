@@ -77,7 +77,6 @@ def prompt_deploy_config() -> dict[str, Any]:
     images = _find_custom_images()
     if images:
         image_choices: list[Any] = [{"name": "None (use marketplace image + cloud-init)", "value": ""}]
-        image_choices.append(Separator())
         for img in images:
             image_choices.append({"name": f"{img['name']} ({img['location']})", "value": img["id"]})
         config["image"] = inquirer.select(
