@@ -82,7 +82,7 @@ build {
       "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists",
 
       "echo '=== Configuring xRDP ==='",
-      "sudo systemctl enable xrdp",
+      "sudo ln -sf /lib/systemd/system/xrdp.service /etc/systemd/system/multi-user.target.wants/xrdp.service",
 
       "echo '=== Cleaning up ==='",
       "sudo apt-get autoremove -y -qq",
@@ -98,11 +98,14 @@ build {
     ]
   }
 
-  # Generalise the VM so Azure can re-provision it with new credentials
+  # Generalise the VM so Azure can re-provision it with new credentials.
+  # waagent may fail to talk to systemd — that's OK, the deprovision still
+  # clears SSH keys, hostname, and user data which is all we need.
   provisioner "shell" {
     execute_command = "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'"
+    expect_disconnect = true
     inline = [
-      "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync",
+      "/usr/sbin/waagent -force -deprovision+user; export HISTSIZE=0; sync",
     ]
   }
 }
