@@ -103,6 +103,39 @@ build {
     ]
   }
 
+  # Place the lab README on the desktop (in /etc/skel so every user gets it)
+  provisioner "shell" {
+    inline = [
+      "sudo mkdir -p /etc/skel/Desktop",
+      <<-SCRIPT
+      sudo tee /etc/skel/Desktop/README.txt > /dev/null << 'MOTD'
+=== AZSaboteur - Attack Lab ===
+
+You are on the attack machine inside an Azure virtual network.
+
+NETWORK LAYOUT
+  Your machine : 10.13.37.0/28  (kali subnet)
+  Target range : 10.13.37.16/28 (lab subnet)
+
+START HERE
+  1. Scan the target range:  nmap -sV 10.13.37.16/28
+  2. Find exposed services and weak credentials
+  3. Exploit the chain - each step leads to the next
+  4. Capture flags (format: AZS_F{xxxxxxxxxxxx})
+
+TOOLS AVAILABLE
+  nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
+  metasploit, burpsuite, responder, aircrack-ng
+
+WORDLISTS (via SecLists)
+  /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
+
+Good luck, operator.
+MOTD
+      SCRIPT
+    ]
+  }
+
   # Generalise the VM so Azure can re-provision it with new credentials.
   # waagent may fail to talk to systemd — that's OK, the deprovision still
   # clears SSH keys, hostname, and user data which is all we need.
