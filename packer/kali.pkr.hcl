@@ -76,7 +76,7 @@ build {
       "sudo apt-get upgrade -y -qq",
 
       "echo '=== Installing xRDP and desktop ==='",
-      "sudo apt-get install -y -qq xrdp xfce4 xfce4-goodies dbus-x11",
+      "sudo apt-get install -y -qq xrdp xorgxrdp xfce4 xfce4-goodies dbus-x11",
 
       "echo '=== Installing Kali top 10 tools ==='",
       "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists",
@@ -91,10 +91,15 @@ build {
     ]
   }
 
-  # Set up xfce4 as the default session for any user that logs in via xRDP
+  # Set up xfce4 as the default session for xRDP logins
   provisioner "shell" {
     inline = [
       "echo 'xfce4-session' | sudo tee /etc/skel/.xsession",
+      "sudo chmod +x /etc/skel/.xsession",
+      "echo 'xfce4-session' | sudo tee /etc/xrdp/startwm.sh.bak",
+      "sudo sed -i 's|test -x /etc/X11/Xsession.*|exec xfce4-session|' /etc/xrdp/startwm.sh || true",
+      "sudo sed -i '/^exec/d' /etc/xrdp/startwm.sh",
+      "echo 'exec xfce4-session' | sudo tee -a /etc/xrdp/startwm.sh",
     ]
   }
 

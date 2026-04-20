@@ -99,11 +99,14 @@ resource "azurerm_linux_virtual_machine" "this" {
     package_update: true
     runcmd:
       - export DEBIAN_FRONTEND=noninteractive
-      - apt-get install -y -qq openssh-server xrdp xfce4 xfce4-goodies dbus-x11
+      - apt-get install -y -qq openssh-server xrdp xorgxrdp xfce4 xfce4-goodies dbus-x11
       - systemctl enable ssh
       - systemctl start ssh
       - echo 'xfce4-session' > /home/${var.admin_username}/.xsession
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
+      - chmod +x /home/${var.admin_username}/.xsession
+      - sed -i '/^exec/d' /etc/xrdp/startwm.sh
+      - echo 'exec xfce4-session' >> /etc/xrdp/startwm.sh
       - systemctl enable xrdp
       - systemctl restart xrdp
       - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists || true
