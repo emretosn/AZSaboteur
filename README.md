@@ -27,6 +27,7 @@ Each module defines what it **requires** (e.g. `network_access`, `sp_credentials
 | Ansible | `ansible-playbook` on PATH |
 | sshpass | Any (for SSH ProxyJump through Kali) |
 | Azure CLI | `az` logged in with an active subscription |
+| Packer | >= 1.9 (optional — for building the Kali golden image) |
 | xfreerdp | Optional — for RDP connection to the Kali box |
 
 ---
@@ -66,6 +67,7 @@ uv run saboteur destroy
 | `saboteur generate` | Dry-run: generate a scenario without deploying |
 | `saboteur deploy` | Generate and deploy a scenario to Azure |
 | `saboteur destroy` | Tear down a deployed scenario |
+| `saboteur reprovision` | Re-run Ansible on an existing deployment (~1-2 min) |
 | `saboteur status` | Show all tracked deployments |
 | `saboteur validate <FLAG>` | Check if a flag string is correct |
 | `saboteur list-modules` | Show available vulnerability modules |
@@ -179,14 +181,37 @@ Inject commands to leak a SAS token, use it to read storage containing DB creden
 
 ---
 
-## Custom Kali Image (Optional)
+## Kali Golden Image (Recommended)
 
-Build a custom Kali image with pre-installed tools using Packer:
+Build a Kali image once with Packer to get **reliable, fast deploys**. This bypasses the Azure marketplace entirely (which can intermittently fail on managed subscriptions) and cuts deploy time by ~15 minutes since all tools are pre-installed.
+
+### One-time setup
 
 ```bash
-packer build -var subscription_id=<SUB_ID> packer/kali.pkr.hcl
-saboteur deploy --image <IMAGE_RESOURCE_ID>
+# Create the image resource group
+az group create -n rg-azsaboteur-images -l westeurope
+
+# Build the golden image (~15-20 min)
+cd packer
+packer init .
+packer build -var "subscription_id=$(az account show --query id -o tsv)" .
 ```
+
+This creates a managed image `kali-azsaboteur` in `rg-azsaboteur-images`.
+
+### Usage
+
+Once built, `saboteur deploy` **auto-detects** the golden image — no extra flags needed:
+
+```bash
+uv run saboteur deploy   # automatically uses the golden image
+```
+
+You'll see `✓ Found Kali golden image — skipping marketplace` in the output.
+
+> **Without a golden image**, the CLI falls back to the Kali marketplace image
+> (with cloud-init tool installation), and if that fails, to an Ubuntu base
+> image with the same tools installed via cloud-init.
 
 ---
 
