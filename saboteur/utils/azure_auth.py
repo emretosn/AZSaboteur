@@ -86,3 +86,30 @@ def accept_marketplace_terms(publisher: str, offer: str, plan: str) -> bool:
 def accept_kali_terms() -> bool:
     """Accept Kali Linux marketplace terms."""
     return accept_marketplace_terms("kali-linux", "kali", "kali-2025-2")
+
+
+# Default resource group and image name for the Packer-built Kali golden image
+KALI_IMAGE_RG = "rg-azsaboteur-images"
+KALI_IMAGE_NAME = "kali-azsaboteur"
+
+
+def find_kali_golden_image(subscription_id: str | None = None) -> str | None:
+    """Check if a pre-built Kali golden image exists and return its resource ID."""
+    sub_id = subscription_id or get_subscription_id()
+    if not sub_id:
+        return None
+    try:
+        result = subprocess.run(
+            ["az", "image", "show",
+             "--resource-group", KALI_IMAGE_RG,
+             "--name", KALI_IMAGE_NAME,
+             "--query", "id", "-o", "tsv"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None

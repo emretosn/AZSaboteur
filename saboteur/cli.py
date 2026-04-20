@@ -17,7 +17,7 @@ from saboteur.modules.base import ModuleCategory
 from saboteur.modules.catalog import load_catalog
 from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
-from saboteur.utils.azure_auth import accept_kali_terms, get_subscription_id
+from saboteur.utils.azure_auth import accept_kali_terms, find_kali_golden_image, get_subscription_id
 from saboteur.utils.vm_health import wait_for_rdp
 from saboteur.utils.output import (
     console as out,
@@ -184,7 +184,11 @@ def deploy(
 
     ubuntu_fallback = False
     if not image:
-        if not accept_kali_terms():
+        golden = find_kali_golden_image(sub_id)
+        if golden:
+            print_success(f"Found Kali golden image — skipping marketplace")
+            image = golden
+        elif not accept_kali_terms():
             print_error("Failed to accept Kali Linux marketplace terms. Check your Azure permissions.")
             raise typer.Exit(1)
 
