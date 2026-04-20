@@ -17,12 +17,13 @@ USERNAMES = [
 # Kali. Players brute-force with hydra using the raw NCSC list at:
 #   /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
 # All passwords are lowercase-safe (the apt-packaged SecLists lowercases
-# everything) and meet Azure VM password policy (3-of-4 character classes:
-# these use lowercase + digits + special characters).
+# everything) and meet Azure VM password policy (12+ chars, must contain
+# lowercase + digits + special characters).
 WEAK_PASSWORDS = [
-    "password1!", "p@ssw0rd", "abc123!", "pass@123",
-    "abc@123", "!qaz2wsx", "p@$$w0rd", "pass_2011",
-    "pa$$w0rd", "password@123",
+    "tundra_cool2", "password@123", "lobkova.1979",
+    "skorpions23.5", "victoria_002", "zaxarov-1976",
+    "oriflame_1910", "korostelev_3333", "ghalina_1971",
+    "shirshov.1968",
 ]
 
 
