@@ -46,6 +46,8 @@ locals {
   # Three mutually exclusive image modes
   use_kali_marketplace = !local.use_custom_image && !var.use_ubuntu_fallback
   use_ubuntu_fallback  = !local.use_custom_image && var.use_ubuntu_fallback
+  # Custom images built from the Kali marketplace still need the plan block
+  needs_kali_plan = local.use_kali_marketplace || local.use_custom_image
 }
 
 resource "azurerm_public_ip" "this" {
@@ -156,7 +158,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   }
 
   dynamic "plan" {
-    for_each = local.use_kali_marketplace ? [1] : []
+    for_each = local.needs_kali_plan ? [1] : []
     content {
       name      = "kali-2025-2"
       publisher = "kali-linux"
