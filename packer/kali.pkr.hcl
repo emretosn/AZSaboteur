@@ -25,7 +25,7 @@ variable "vm_size" {
 
 variable "image_resource_group" {
   type    = string
-  default = "rg-azsaboteur-images"
+  default = "rg-AZSaboteur-images"
   description = "Resource group to store the managed image"
 }
 

@@ -89,7 +89,7 @@ def accept_kali_terms() -> bool:
 
 
 # Default resource group and image name for the Packer-built Kali golden image
-KALI_IMAGE_RG = "rg-azsaboteur-images"
+KALI_IMAGE_RG = "rg-AZSaboteur-images"
 KALI_IMAGE_NAME = "kali-azsaboteur"
 
 

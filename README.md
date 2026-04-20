@@ -189,7 +189,7 @@ Build a Kali image once with Packer to get **reliable, fast deploys**. This bypa
 
 ```bash
 # Create the image resource group
-az group create -n rg-azsaboteur-images -l westeurope
+az group create -n rg-AZSaboteur-images -l westeurope
 
 # Build the golden image (~15-20 min)
 cd packer
@@ -197,7 +197,7 @@ packer init .
 packer build -var "subscription_id=$(az account show --query id -o tsv)" .
 ```
 
-This creates a managed image `kali-azsaboteur` in `rg-azsaboteur-images`.
+This creates a managed image `kali-azsaboteur` in `rg-AZSaboteur-images`.
 
 ### Usage
 
