@@ -109,8 +109,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - echo 'exec dbus-launch --exit-with-session xfce4-session' >> /etc/xrdp/startwm.sh
       - systemctl enable xrdp
       - systemctl restart xrdp
-      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat git || true
-      - git clone --depth 1 https://github.com/danielmiessler/SecLists.git /usr/share/seclists || true
+      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat || true
       - mkdir -p /home/${var.admin_username}/Desktop
       - |
         cat > /home/${var.admin_username}/Desktop/README.txt << 'MOTD'
@@ -135,9 +134,6 @@ resource "azurerm_linux_virtual_machine" "this" {
         TIPS
           Look for exposed web services, view page source for leaked credentials.
           Use discovered creds to SSH into targets and pivot through the chain.
-
-        WORDLISTS (via SecLists)
-          /usr/share/seclists/
 
         Good luck, operator.
         MOTD
