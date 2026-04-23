@@ -18,7 +18,14 @@ from saboteur.modules.catalog import load_catalog
 from saboteur.scenario.engine import ScenarioConfig, ScenarioEngine
 from saboteur.scenario.validator import FlagValidator
 from saboteur.utils.azure_auth import accept_kali_terms, find_kali_golden_image, get_subscription_id
-from saboteur.utils.vm_health import wait_for_rdp
+from saboteur.utils.vm_health import (
+    check_port,
+    ensure_nsg_rules,
+    ensure_vm_running,
+    restart_xrdp,
+    wait_for_port,
+    wait_for_rdp,
+)
 from saboteur.utils.output import (
     console as out,
     print_banner,
@@ -463,6 +470,148 @@ def status() -> None:
             f"[cyan]{dep.scenario_id}[/cyan]  "
             f"{chain_str}  ({dep.region}, {dep.created_at})"
         )
+
+
+# ---------------------------------------------------------------------------
+# connect
+# ---------------------------------------------------------------------------
+
+@app.command()
+def connect(
+    ctx: typer.Context,
+    instance: Optional[str] = typer.Argument(None, help="Scenario ID to connect to"),
+) -> None:
+    """Connect to the Kali box of a deployed scenario.
+
+    Ensures the VM is running, NSG rules are in place, and xRDP is healthy.
+    Then prints the xfreerdp connection command.
+    """
+    state = StateManager()
+
+    if instance is None and not _has_explicit_flags(ctx):
+        deployments = state.active
+        if not deployments:
+            print_info("No active deployments to connect to")
+            return
+        if len(deployments) == 1:
+            instance = deployments[0].scenario_id
+        else:
+            from saboteur.utils.prompts import prompt_destroy_instance
+            cfg = prompt_destroy_instance()
+            instance = cfg["instance"]
+            if not instance:
+                return
+
+    if not instance:
+        print_error("No scenario ID provided. Usage: saboteur connect <SCENARIO_ID>")
+        raise typer.Exit(1)
+
+    deployment = state.get(instance)
+    if not deployment:
+        print_error(f"No deployment found with ID: {instance}")
+        raise typer.Exit(1)
+
+    if deployment.status != "deployed":
+        print_error(
+            f"Deployment {instance} is in '{deployment.status}' state — "
+            "can only connect to deployed scenarios"
+        )
+        raise typer.Exit(1)
+
+    # Read Terraform outputs for IP / resource names
+    tf = TerraformRunner(scenario_id=instance)
+    if not tf.init():
+        raise typer.Exit(1)
+    tf_outputs = tf.output()
+
+    if not tf_outputs:
+        print_error("Could not read Terraform outputs — is the infrastructure still deployed?")
+        raise typer.Exit(1)
+
+    kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "")
+    kali_user = tf_outputs.get("kali_admin_username", {}).get("value", "kali")
+    rg_name = tf_outputs.get("resource_group_name", {}).get("value", f"rg-{instance}")
+
+    if not kali_ip:
+        print_error("Could not determine Kali box IP from Terraform outputs")
+        raise typer.Exit(1)
+
+    # Recover kali password from tfvars
+    var_file = tf.working_dir / "scenario.auto.tfvars.json"
+    if not var_file.exists():
+        print_error(
+            f"Variable file not found: {var_file}\n"
+            "Cannot recover credentials — a full redeploy is needed."
+        )
+        raise typer.Exit(1)
+
+    with open(var_file) as f:
+        tf_vars = json.load(f)
+
+    kali_pass = tf_vars.get("kali_admin_password", "")
+    if not kali_pass:
+        print_error("Could not recover Kali password from tfvars — a full redeploy is needed.")
+        raise typer.Exit(1)
+
+    vm_name = f"vm-kali-{instance}"
+    nsg_name = f"nsg-kali-{instance}"
+
+    # Step 1: Ensure the VM is running
+    print_info("Checking VM status...")
+    if not ensure_vm_running(rg_name, vm_name):
+        raise typer.Exit(1)
+
+    # Step 2: Ensure NSG rules allow RDP/SSH inbound
+    print_info("Checking NSG rules...")
+    if not ensure_nsg_rules(rg_name, nsg_name):
+        print_warning("Could not verify NSG rules — connection may fail")
+
+    # Step 3: Check RDP port, restart xRDP if needed
+    if not check_port(kali_ip, 3389):
+        print_warning("RDP port not reachable — attempting recovery...")
+        restart_xrdp(rg_name, vm_name)
+        if not wait_for_port(kali_ip, 3389, timeout=60, label="RDP"):
+            print_error(
+                "RDP port still unreachable after xRDP restart.\n"
+                "The VM may need more time to boot. Try again in a minute."
+            )
+            raise typer.Exit(1)
+
+    # Step 4: Fix startwm.sh if dbus-launch is missing (xfce4 crashes without it)
+    _ensure_dbus_launch(rg_name, vm_name)
+
+    print_success("Kali box is ready!")
+    conn_cmd = (
+        f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:'{kali_pass}'"
+        " /cert:ignore /dynamic-resolution"
+    )
+    print_mission_briefing(
+        target=f"{kali_ip} (Kali box)",
+        objective="Scan the network, exploit the chain, and capture the flags.",
+        connection_info=conn_cmd,
+    )
+
+
+def _ensure_dbus_launch(resource_group: str, vm_name: str) -> None:
+    """Ensure startwm.sh uses dbus-launch so xfce4-session survives reconnects."""
+    from saboteur.utils.vm_health import _run_vm_command
+
+    output = _run_vm_command(
+        resource_group,
+        vm_name,
+        "grep -q 'dbus-launch' /etc/xrdp/startwm.sh && echo PATCHED || echo NEEDS_PATCH",
+    )
+    if output is not None and "PATCHED" in output and "NEEDS_PATCH" not in output:
+        return
+
+    print_info("Patching xRDP session to use dbus-launch...")
+    _run_vm_command(
+        resource_group,
+        vm_name,
+        "sudo sed -i "
+        "'s|^exec xfce4-session|exec dbus-launch --exit-with-session xfce4-session|' "
+        "/etc/xrdp/startwm.sh && sudo systemctl restart xrdp",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -97,9 +97,9 @@ build {
       "echo 'xfce4-session' | sudo tee /etc/skel/.xsession",
       "sudo chmod +x /etc/skel/.xsession",
       "echo 'xfce4-session' | sudo tee /etc/xrdp/startwm.sh.bak",
-      "sudo sed -i 's|test -x /etc/X11/Xsession.*|exec xfce4-session|' /etc/xrdp/startwm.sh || true",
+      "sudo sed -i 's|test -x /etc/X11/Xsession.*|exec dbus-launch --exit-with-session xfce4-session|' /etc/xrdp/startwm.sh || true",
       "sudo sed -i '/^exec/d' /etc/xrdp/startwm.sh",
-      "echo 'exec xfce4-session' | sudo tee -a /etc/xrdp/startwm.sh",
+      "echo 'exec dbus-launch --exit-with-session xfce4-session' | sudo tee -a /etc/xrdp/startwm.sh",
     ]
   }
 

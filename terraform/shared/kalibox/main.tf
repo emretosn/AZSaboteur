@@ -106,7 +106,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/.xsession
       - chmod +x /home/${var.admin_username}/.xsession
       - sed -i '/^exec/d' /etc/xrdp/startwm.sh
-      - echo 'exec xfce4-session' >> /etc/xrdp/startwm.sh
+      - echo 'exec dbus-launch --exit-with-session xfce4-session' >> /etc/xrdp/startwm.sh
       - systemctl enable xrdp
       - systemctl restart xrdp
       - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists || true
