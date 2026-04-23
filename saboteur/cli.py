@@ -391,28 +391,44 @@ def destroy(
 # ---------------------------------------------------------------------------
 
 @app.command()
-def clean() -> None:
+def clean(
+    instance: Optional[str] = typer.Argument(
+        None, help="Scenario ID to clean (omit to clean all)"
+    ),
+) -> None:
     """Reset local Terraform state and saboteur tracking when destroy fails.
 
-    Use this when 'saboteur destroy' can't delete resources (e.g. permission errors).
-    It removes all resources from Terraform state and clears saboteur deployment tracking.
+    Use this when 'saboteur destroy' can't delete resources (e.g. permission errors),
+    or to remove stale local tracking for a deployment that no longer exists in Azure.
+    It removes resources from Terraform state and clears saboteur deployment tracking.
     Orphaned Azure resources must be deleted manually via the portal.
     """
     state = StateManager()
-    deployments = state.all
+
+    if instance:
+        deployment = state.get(instance)
+        if not deployment:
+            print_error(f"No deployment found with ID: {instance}")
+            raise typer.Exit(1)
+        deployments = [deployment]
+    else:
+        deployments = state.all
 
     if not deployments:
         print_info("Nothing to clean — no deployments tracked")
         return
 
-    print_warning(f"Saboteur is tracking {len(deployments)} deployment(s):")
+    print_warning(f"Cleaning {len(deployments)} deployment(s):")
     for dep in deployments:
         out.print(f"  [cyan]{dep.scenario_id}[/cyan] ({dep.status})")
 
     out.print()
+    scope = f"'{instance}'" if instance else "all deployments"
     print_warning(
-        "This will remove all resources from local Terraform state and clear deployment tracking.\n"
-        "It does NOT delete anything from Azure — orphaned resources must be cleaned up manually in the portal."
+        f"This will remove {scope} from local Terraform state "
+        "and clear deployment tracking.\n"
+        "It does NOT delete anything from Azure — orphaned "
+        "resources must be cleaned up manually in the portal."
     )
 
     total_removed = 0
@@ -437,13 +453,19 @@ def clean() -> None:
         tf._delete_workspace()
         state.remove(dep.scenario_id)
 
-    tf_default = TerraformRunner()
-    tf_default.clean_chain_tf()
+    # Only clean chain.tf when removing all deployments
+    if not instance:
+        tf_default = TerraformRunner()
+        tf_default.clean_chain_tf()
 
     print_success(
         f"Local cleanup complete — removed {total_removed} resource(s) from Terraform state, "
         f"cleared {len(deployments)} deployment(s) from tracking"
     )
+    if instance:
+        print_info(
+            f"Deployment '{instance}' removed from local tracking"
+        )
     print_warning("Remember to delete orphaned resources in the Azure portal")
 
 
@@ -496,8 +518,8 @@ def connect(
         if len(deployments) == 1:
             instance = deployments[0].scenario_id
         else:
-            from saboteur.utils.prompts import prompt_destroy_instance
-            cfg = prompt_destroy_instance()
+            from saboteur.utils.prompts import prompt_select_instance
+            cfg = prompt_select_instance("Select deployment to connect to:")
             instance = cfg["instance"]
             if not instance:
                 return

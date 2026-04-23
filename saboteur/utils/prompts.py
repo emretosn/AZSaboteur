@@ -184,6 +184,16 @@ def prompt_generate_config() -> dict[str, Any]:
 
 def prompt_destroy_instance() -> dict[str, Any]:
     """Let the user pick a deployment to destroy."""
+    return _prompt_select_instance("Select deployment to destroy:")
+
+
+def prompt_select_instance(message: str = "Select deployment:") -> dict[str, Any]:
+    """Let the user pick a deployment with a custom prompt message."""
+    return _prompt_select_instance(message)
+
+
+def _prompt_select_instance(message: str) -> dict[str, Any]:
+    """Internal helper — prompt user to pick a deployment."""
     from saboteur.config import StateManager
 
     config: dict[str, Any] = {}
@@ -200,7 +210,7 @@ def prompt_destroy_instance() -> dict[str, Any]:
         choices.append({"name": label, "value": dep.scenario_id})
 
     config["instance"] = inquirer.select(
-        message="Select deployment to destroy:",
+        message=message,
         choices=choices,
     ).execute()
 
