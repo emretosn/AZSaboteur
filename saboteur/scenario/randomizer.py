@@ -13,17 +13,23 @@ USERNAMES = [
 ]
 
 # Weak passwords for entry-point modules — every password here exists in the
-# NCSC 100k-most-used-passwords list shipped with the SecLists apt package on
-# Kali. Players brute-force with hydra using the raw NCSC list at:
+# NCSC 100k-most-used-passwords list from the GitHub SecLists repository at:
+#   https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
+# Players brute-force with hydra using this list, installed on Kali at:
 #   /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
-# All passwords are lowercase-safe (the apt-packaged SecLists lowercases
-# everything) and meet Azure VM password policy (12+ chars, must contain
-# lowercase + digits + special characters).
+# All passwords meet Azure VM password policy (12+ chars, 3 of 4 complexity
+# classes: lowercase, uppercase, digits, special characters).
 WEAK_PASSWORDS = [
-    "tundra_cool2", "password@123", "lobkova.1979",
-    "skorpions23.5", "victoria_002", "zaxarov-1976",
-    "oriflame_1910", "korostelev_3333", "ghalina_1971",
-    "shirshov.1968",
+    "Sojdlg123aljg",
+    "PolniyPizdec0211",
+    "Megaparol12345",
+    "MaprCheM56458",
+    "Jundian2011xr",
+    "123admin321A",
+    "Neworleans12345",
+    "Lightpower12345",
+    "Stefangreil1983",
+    "Somanypickles27",
 ]
 
 

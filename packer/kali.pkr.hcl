@@ -79,7 +79,10 @@ build {
       "sudo apt-get install -y -qq xrdp xorgxrdp xfce4 xfce4-goodies dbus-x11",
 
       "echo '=== Installing Kali top 10 tools ==='",
-      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat seclists",
+      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat",
+
+      "echo '=== Installing SecLists from GitHub (apt package differs) ==='",
+      "sudo git clone --depth 1 https://github.com/danielmiessler/SecLists.git /usr/share/seclists",
 
       "echo '=== Configuring xRDP ==='",
       "sudo ln -sf /lib/systemd/system/xrdp.service /etc/systemd/system/multi-user.target.wants/xrdp.service",
