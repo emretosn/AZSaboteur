@@ -12,22 +12,6 @@ USERNAMES = [
     "db_reader", "func_runner", "blob_writer", "kv_reader", "infra_bot",
 ]
 
-# Weak passwords for entry-point modules — every password here exists in the
-# NCSC 100k-most-used-passwords list from the GitHub SecLists repository at:
-#   https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
-# Players brute-force with hydra using this list, installed on Kali at:
-#   /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
-# All passwords meet Azure VM password policy (12+ chars, 3 of 4 complexity
-# classes: lowercase, uppercase, digits, special characters).
-WEAK_PASSWORDS = [
-    "Password1234",
-    "Qwerty123456",
-    "Password@123",
-    "password@123",
-    "123admin321A",
-    "123456789ABCDe",
-]
-
 
 class Randomizer:
     """Generates randomized values for scenario deployment."""
@@ -51,10 +35,9 @@ class Randomizer:
     def credentials(self, count: int = 1, entry_steps: set[int] | None = None) -> dict[str, str]:
         """Generate random username/password pairs.
 
-        Steps in ``entry_steps`` get weak, brute-forceable passwords.
-        All other steps get strong random passwords.
+        All steps get strong random passwords. Credentials for entry-point
+        VMs are discovered via deployment pages (port 8080), not brute-forcing.
         """
-        entry_steps = entry_steps or set()
         creds = {}
         used_usernames: set[str] = set()
         for i in range(count):
@@ -63,14 +46,10 @@ class Randomizer:
                 available = USERNAMES
             username = self.rng.choice(available)
             used_usernames.add(username)
-            password = self.weak_password() if i in entry_steps else self._password()
+            password = self._password()
             creds[f"step_{i}_username"] = username
             creds[f"step_{i}_password"] = password
         return creds
-
-    def weak_password(self) -> str:
-        """Return a weak, brute-forceable password from a common wordlist."""
-        return self.rng.choice(WEAK_PASSWORDS)
 
     def _password(self, length: int = 16) -> str:
         lower = string.ascii_lowercase

@@ -130,8 +130,12 @@ TOOLS AVAILABLE
   nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
   metasploit, burpsuite, responder, aircrack-ng
 
+TIPS
+  Look for exposed web services, view page source for leaked credentials.
+  Use discovered creds to SSH into targets and pivot through the chain.
+
 WORDLISTS (via SecLists)
-  /usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
+  /usr/share/seclists/
 
 Good luck, operator.
 MOTD

@@ -95,10 +95,7 @@ class ScenarioEngine:
         for i in range(len(chain)):
             flags[i] = randomizer.flag_string()
 
-        credentials = randomizer.credentials(
-            len(chain),
-            entry_steps={i for i, mod in enumerate(chain) if mod.is_entry_point},
-        )
+        credentials = randomizer.credentials(len(chain))
         resource_names = {mod.id: randomizer.resource_name(mod.id) for mod in chain}
 
         graph = ScenarioGraph.from_chain(chain)

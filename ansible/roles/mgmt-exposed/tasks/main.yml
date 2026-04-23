@@ -6,11 +6,9 @@
     mode: "0755"
   become: true
 
-# SSH banner and sshd hardening (MaxAuthTries, MaxStartups, fail2ban)
-# are configured by Terraform cloud-init at VM creation time so they
-# are in place before Ansible connects. We do NOT touch sshd here
-# because sshpass (used for the SSH proxy connection through Kali)
-# misinterprets the pre-auth banner text and drops the connection.
+# SSH banner and deployment portal are configured by Terraform cloud-init.
+# The portal on port 8080 leaks SSH credentials in HTML source comments.
+# Players: nmap → discover port 8080 → curl/browse → view source → SSH in.
 
 - name: Plant next-step credentials breadcrumb
   ansible.builtin.copy:
