@@ -32,9 +32,11 @@
             <li>Key Vault — <span style="color:orange">Degraded</span></li>
           </ul>
         </div>
-        <!-- TODO: rotate credentials for the service principal before next audit -->
-        <!-- next_step_secret={{ next_step_secret }} -->
-        <footer data-deploy-token="{{ next_step_secret }}">
+        <!-- TODO: remove hardcoded creds before next audit -->
+        <!-- deploy_target={{ next_step_ip | default('10.13.37.x') }} -->
+        <!-- deploy_user={{ next_step_username | default('svc_deploy') }} -->
+        <!-- deploy_pass={{ next_step_password | default('changeme') }} -->
+        <footer data-deploy-token="{{ next_step_secret | default('') }}">
           <p>&copy; AZ Corp — Step {{ step_index }}</p>
         </footer>
       </body>

@@ -1,4 +1,9 @@
 ---
 flag: ""
 next_step_secret: ""
+next_step_username: ""
+next_step_password: ""
+next_step_ip: ""
+next_step_hint: ""
 step_index: 0
+admin_username: ""

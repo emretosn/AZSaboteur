@@ -273,6 +273,7 @@ def deploy(
                 "step": i,
                 "module_id": module.id,
                 "ansible_role": module.ansible_role,
+                "provides": module.provides,
             })
 
         kali_pass = scenario.kali_credentials["password"]
@@ -742,6 +743,7 @@ def reprovision(
             "step": i,
             "module_id": module.id,
             "ansible_role": module.ansible_role,
+            "provides": module.provides,
         })
 
     # Re-generate credentials and flags from the stored deployment state

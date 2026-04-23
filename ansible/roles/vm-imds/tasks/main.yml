@@ -26,7 +26,23 @@
       Useful endpoints:
         - Instance metadata: http://169.254.169.254/metadata/instance?api-version=2021-02-01
         - Managed identity token: http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/
+        - Key Vault token: http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net
 
       Tip: Use the token to enumerate what this identity can access.
-      Look for storage accounts, Key Vaults, and other resources in the RG.
+      Look for Key Vaults, storage accounts, and other resources in the RG.
+      Try: curl -s -H "Authorization: Bearer <token>" "https://management.azure.com/subscriptions/<sub>/resources?api-version=2021-04-01"
+  become: true
+
+- name: Plant realistic bash history
+  ansible.builtin.copy:
+    dest: "/home/{{ admin_username }}/.bash_history"
+    owner: "{{ admin_username }}"
+    mode: "0600"
+    content: |
+      curl -s -H "Metadata:true" "http://169.254.169.254/metadata/instance?api-version=2021-02-01" | python3 -m json.tool
+      curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/" | python3 -m json.tool
+      curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net" | python3 -m json.tool
+      cat /opt/azsaboteur/notes.txt
+      cat /opt/azsaboteur/flag.txt
+      history -c
   become: true

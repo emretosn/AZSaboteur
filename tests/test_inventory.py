@@ -36,9 +36,12 @@ class TestGenerateInventory:
     }
 
     MOCK_CHAIN = [
-        {"step": 0, "module_id": "WEB-SSRF", "ansible_role": "roles/vulnerable-flask-app"},
-        {"step": 1, "module_id": "STR-KEYVAULT-POLICY", "ansible_role": "roles/keyvault-lax"},
-        {"step": 2, "module_id": "NET-MGMT-EXPOSED", "ansible_role": "roles/mgmt-exposed"},
+        {"step": 0, "module_id": "WEB-SSRF", "ansible_role": "roles/vulnerable-flask-app",
+         "provides": ["managed_identity_token"]},
+        {"step": 1, "module_id": "STR-KEYVAULT-POLICY", "ansible_role": "roles/keyvault-lax",
+         "provides": ["sp_credentials"]},
+        {"step": 2, "module_id": "NET-MGMT-EXPOSED", "ansible_role": "roles/mgmt-exposed",
+         "provides": ["vm_shell"]},
     ]
 
     MOCK_CREDS = {
@@ -131,3 +134,45 @@ class TestGenerateInventory:
         )
         inv = yaml.safe_load(path.read_text())
         assert inv["all"]["children"] == {}
+
+    def test_bridge_vars_for_middle_step(self, tmp_path, monkeypatch):
+        """Step 0 should have next step's (step 1) credentials as bridge vars."""
+        monkeypatch.setattr("saboteur.deploy.inventory.ANSIBLE_DIR", tmp_path)
+        path = generate_inventory(
+            self.MOCK_TF_OUTPUTS, self.MOCK_CHAIN,
+            self.MOCK_CREDS, self.MOCK_FLAGS, "kalipass",
+        )
+        inv = yaml.safe_load(path.read_text())
+        step0 = inv["all"]["children"]["vulnerable_flask_app"]["hosts"]["step_0"]
+        # Step 0 should bridge to step 1's credentials
+        assert step0["next_step_username"] == "kv_reader"
+        assert step0["next_step_password"] == "KvP@ss!"
+        assert step0["next_step_secret"] == "KvP@ss!"
+        assert "next_step_hint" in step0
+
+    def test_bridge_vars_for_last_step(self, tmp_path, monkeypatch):
+        """Last step should have empty bridge vars (no flag leakage)."""
+        monkeypatch.setattr("saboteur.deploy.inventory.ANSIBLE_DIR", tmp_path)
+        path = generate_inventory(
+            self.MOCK_TF_OUTPUTS, self.MOCK_CHAIN,
+            self.MOCK_CREDS, self.MOCK_FLAGS, "kalipass",
+        )
+        inv = yaml.safe_load(path.read_text())
+        step2 = inv["all"]["children"]["mgmt_exposed"]["hosts"]["step_2"]
+        # Terminal step: no bridge secret (don't leak final flag)
+        assert step2["next_step_secret"] == ""
+        assert step2["next_step_username"] == ""
+        assert step2["next_step_password"] == ""
+        assert step2["next_step_ip"] == ""
+
+    def test_bridge_has_next_step_ip(self, tmp_path, monkeypatch):
+        """Step 1 should bridge with step 2's private IP."""
+        monkeypatch.setattr("saboteur.deploy.inventory.ANSIBLE_DIR", tmp_path)
+        path = generate_inventory(
+            self.MOCK_TF_OUTPUTS, self.MOCK_CHAIN,
+            self.MOCK_CREDS, self.MOCK_FLAGS, "kalipass",
+        )
+        inv = yaml.safe_load(path.read_text())
+        step1 = inv["all"]["children"]["keyvault_lax"]["hosts"]["step_1"]
+        assert step1["next_step_ip"] == "10.13.37.21"
+        assert step1["next_step_username"] == "webadmin"
