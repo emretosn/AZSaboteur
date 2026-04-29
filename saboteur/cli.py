@@ -638,6 +638,95 @@ def _ensure_dbus_launch(resource_group: str, vm_name: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# credentials
+# ---------------------------------------------------------------------------
+
+@app.command()
+def credentials(
+    ctx: typer.Context,
+    instance: Optional[str] = typer.Argument(None, help="Scenario ID"),
+) -> None:
+    """Print the Kali box connection credentials for a deployed scenario.
+
+    Recovers the IP, username, and password from Terraform state so you can
+    reconnect even after the original mission briefing has scrolled away.
+    """
+    state = StateManager()
+
+    if instance is None and not _has_explicit_flags(ctx):
+        deployments = state.active
+        if not deployments:
+            print_info("No active deployments")
+            return
+        if len(deployments) == 1:
+            instance = deployments[0].scenario_id
+        else:
+            from saboteur.utils.prompts import prompt_select_instance
+            cfg = prompt_select_instance("Select deployment:")
+            instance = cfg["instance"]
+            if not instance:
+                return
+
+    if not instance:
+        print_error("No scenario ID provided. Usage: saboteur credentials <SCENARIO_ID>")
+        raise typer.Exit(1)
+
+    deployment = state.get(instance)
+    if not deployment:
+        print_error(f"No deployment found with ID: {instance}")
+        raise typer.Exit(1)
+
+    if deployment.status != "deployed":
+        print_error(
+            f"Deployment {instance} is in '{deployment.status}' state — "
+            "can only show credentials for deployed scenarios"
+        )
+        raise typer.Exit(1)
+
+    tf = TerraformRunner(scenario_id=instance)
+    if not tf.init():
+        raise typer.Exit(1)
+    tf_outputs = tf.output()
+
+    if not tf_outputs:
+        print_error("Could not read Terraform outputs — is the infrastructure still deployed?")
+        raise typer.Exit(1)
+
+    kali_ip = tf_outputs.get("kali_public_ip", {}).get("value", "")
+    kali_user = tf_outputs.get("kali_admin_username", {}).get("value", "kali")
+
+    if not kali_ip:
+        print_error("Could not determine Kali box IP from Terraform outputs")
+        raise typer.Exit(1)
+
+    var_file = tf.working_dir / "scenario.auto.tfvars.json"
+    if not var_file.exists():
+        print_error(
+            f"Variable file not found: {var_file}\n"
+            "Cannot recover credentials — a full redeploy is needed."
+        )
+        raise typer.Exit(1)
+
+    with open(var_file) as f:
+        tf_vars = json.load(f)
+
+    kali_pass = tf_vars.get("kali_admin_password", "")
+    if not kali_pass:
+        print_error("Could not recover Kali password from tfvars — a full redeploy is needed.")
+        raise typer.Exit(1)
+
+    conn_cmd = (
+        f"xfreerdp /v:{kali_ip} /u:{kali_user} /p:'{kali_pass}'"
+        " /cert:ignore /dynamic-resolution"
+    )
+    print_mission_briefing(
+        target=f"{kali_ip} (Kali box)",
+        objective="Reconnect to your attack box using the credentials below.",
+        connection_info=conn_cmd,
+    )
+
+
+# ---------------------------------------------------------------------------
 # validate
 # ---------------------------------------------------------------------------
 
