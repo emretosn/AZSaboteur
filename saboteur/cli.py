@@ -739,11 +739,13 @@ def credentials(
 def validate(
     ctx: typer.Context,
     instance: Optional[str] = typer.Option(None, "--instance", "-i", help="Scenario ID"),
+    reset: bool = typer.Option(False, "--reset", help="Clear saved progress and start fresh"),
 ) -> None:
     """Interactive flag validation menu.
 
     Submit captured flags and track your progress through the attack chain.
     Flags can be entered in any order. Progress is saved between sessions.
+    Use --reset to clear saved progress without destroying the deployment.
     """
     if not sys.stdin.isatty():
         print_error("saboteur validate requires an interactive terminal.")
@@ -777,6 +779,10 @@ def validate(
     if not deployment.flags:
         print_info("This scenario has no flags to validate.")
         return
+
+    if reset:
+        FlagValidator.clear_state(deployment.scenario_id)
+        print_success(f"Validation progress reset for {deployment.scenario_id}")
 
     validator = FlagValidator(deployment.flags, scenario_id=deployment.scenario_id)
     total = len(deployment.flags)
@@ -818,7 +824,7 @@ def validate(
 
         result = validator.validate(submitted)
         if result.correct and result.already_solved:
-            message = f"[bold yellow]⚠ {result.message}[/bold yellow]"
+            message = f"[bold yellow]! {result.message}[/bold yellow]"
         elif result.correct:
             message = f"[bold green]✓ {result.message}[/bold green]"
         else:
