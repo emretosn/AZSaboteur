@@ -31,8 +31,9 @@ LOGIN_PAGE = """
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-               background: #eef1f5; display: flex; justify-content: center;
-               align-items: center; min-height: 100vh; }
+               background: #eef1f5; display: flex; flex-direction: column;
+               justify-content: center; align-items: center; min-height: 100vh;
+               padding: 40px 16px; }
         .card { background: #fff; padding: 40px 36px; border-radius: 10px;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 380px; }
         h1 { font-size: 1.4rem; text-align: center; margin-bottom: 24px; }
@@ -47,17 +48,17 @@ LOGIN_PAGE = """
                font-size: 0.9rem; }
         .msg-ok  { background: #d4edda; color: #155724; }
         .msg-err { background: #f8d7da; color: #721c24; }
-        .users-table { margin-top: 16px; width: 100%; border-collapse: collapse;
-                       font-size: 0.85rem; }
-        .users-table th, .users-table td { padding: 6px 8px; border: 1px solid #ddd;
-                                           text-align: left; }
-        .users-table th { background: #f5f5f5; }
+        .results { margin-top: 24px; width: auto; max-width: 90vw; }
+        .results table { border-collapse: collapse; font-size: 0.85rem; }
+        .results th, .results td { padding: 8px 12px; border: 1px solid #ddd;
+                                   text-align: left; white-space: nowrap; }
+        .results th { background: #f5f5f5; }
         footer { margin-top: 20px; text-align: center; color: #aaa; font-size: 0.75rem; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>&#128274; CorpPortal Login</h1>
+        <h1>Contoso Portal Login</h1>
         <form action="/login" method="post">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
@@ -68,16 +69,18 @@ LOGIN_PAGE = """
         {% if message %}
             <div class="msg {{ msg_class }}">{{ message }}</div>
         {% endif %}
-        {% if rows %}
-            <table class="users-table">
-                <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
-                {% for row in rows %}
-                <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                {% endfor %}
-            </table>
-        {% endif %}
         <footer>&copy; 2025 CorpPortal — Internal Use Only</footer>
     </div>
+    {% if rows %}
+    <div class="results">
+        <table>
+            <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+            {% for row in rows %}
+            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
 </body>
 </html>
 """
