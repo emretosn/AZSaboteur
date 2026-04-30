@@ -213,11 +213,6 @@ def prompt_destroy_instance() -> dict[str, Any]:
 
 def prompt_select_instance(message: str = "Select deployment:") -> dict[str, Any]:
     """Let the user pick a deployment with a custom prompt message."""
-    return _prompt_select_instance(message)
-
-
-def _prompt_select_instance(message: str) -> dict[str, Any]:
-    """Internal helper — prompt user to pick a deployment."""
     from saboteur.config import StateManager
 
     config: dict[str, Any] = {}
@@ -237,6 +232,13 @@ def _prompt_select_instance(message: str) -> dict[str, Any]:
         message=message,
         choices=choices,
     ).execute()
+
+    return config
+
+
+def _prompt_select_instance(message: str) -> dict[str, Any]:
+    """Internal helper — prompt user to pick a deployment + verbose flag."""
+    config = prompt_select_instance(message)
 
     config["verbose"] = inquirer.confirm(
         message="Enable verbose Terraform output?",
