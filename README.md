@@ -51,6 +51,9 @@ uv run saboteur deploy
 # Scripted mode — deploy a 3-step chain
 uv run saboteur deploy --chain-length 3 --region westeurope
 
+# Exact chain — pick specific modules (use 'saboteur list-modules' to see options)
+uv run saboteur deploy --chain NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY
+
 # Infra-only (just Kali box, no attack chain)
 uv run saboteur deploy --chain-length 0
 

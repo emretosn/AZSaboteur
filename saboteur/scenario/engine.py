@@ -21,6 +21,7 @@ class ScenarioConfig:
     region: str = "westeurope"
     subscription_id: str = ""
     seed: int | None = None
+    explicit_chain: list[str] | None = None
 
 
 @dataclass
@@ -116,12 +117,10 @@ class ScenarioEngine:
         )
 
     def _build_chain(self, config: ScenarioConfig) -> list[VulnModule]:
-        """Build a random attack chain of exactly ``chain_length`` steps.
+        """Build an attack chain — either from an explicit list or randomly."""
+        if config.explicit_chain:
+            return self._build_explicit_chain(config.explicit_chain)
 
-        Uses DFS with backtracking over randomly-shuffled candidates so each
-        run (with a different seed) produces a different chain.  Raises
-        ``ValueError`` only when no chain of the requested length exists at all.
-        """
         if config.chain_length == 0:
             return []
 
@@ -142,6 +141,40 @@ class ScenarioEngine:
             f"with the available modules and category filters. "
             f"Try a shorter chain or broader categories."
         )
+
+    def _build_explicit_chain(self, module_ids: list[str]) -> list[VulnModule]:
+        """Resolve and validate a user-specified chain of module IDs."""
+        if not module_ids:
+            return []
+
+        modules: list[VulnModule] = []
+        for mid in module_ids:
+            mod = self.catalog.get(mid)
+            if mod is None:
+                available = ", ".join(m.id for m in self.catalog.all)
+                raise ValueError(
+                    f"Unknown module '{mid}'. Available modules: {available}"
+                )
+            modules.append(mod)
+
+        # First module must be an entry point
+        if not modules[0].is_entry_point:
+            raise ValueError(
+                f"First module '{modules[0].id}' is not an entry point "
+                f"(requires {modules[0].requires}, but entry points must only "
+                f"require 'network_access')."
+            )
+
+        # Validate each link in the chain
+        for i in range(1, len(modules)):
+            prev, curr = modules[i - 1], modules[i]
+            if not curr.can_follow(prev):
+                raise ValueError(
+                    f"Invalid chain link: '{curr.id}' requires {curr.requires} "
+                    f"but '{prev.id}' provides {prev.provides}."
+                )
+
+        return modules
 
     def _extend_chain(
         self, chain: list[VulnModule], config: ScenarioConfig

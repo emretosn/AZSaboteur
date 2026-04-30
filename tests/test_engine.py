@@ -66,3 +66,48 @@ class TestScenarioEngine:
         for mid in scenario.graph.nodes:
             mod = scenario.graph.get_module(mid)
             assert mod.category in [ModuleCategory.WEB, ModuleCategory.STORAGE]
+
+    def test_explicit_chain(self):
+        engine = self._engine()
+        config = ScenarioConfig(
+            explicit_chain=["NET-MGMT-EXPOSED", "CMP-IMDS", "STR-KEYVAULT-POLICY"],
+        )
+        scenario = engine.generate(config)
+        chain = [scenario.graph.get_module(n).id for n in scenario.graph.topo_order()]
+        assert chain == ["NET-MGMT-EXPOSED", "CMP-IMDS", "STR-KEYVAULT-POLICY"]
+
+    def test_explicit_chain_two_modules(self):
+        engine = self._engine()
+        config = ScenarioConfig(
+            explicit_chain=["NET-MGMT-EXPOSED", "CMP-IMDS"],
+        )
+        scenario = engine.generate(config)
+        chain = [scenario.graph.get_module(n).id for n in scenario.graph.topo_order()]
+        assert chain == ["NET-MGMT-EXPOSED", "CMP-IMDS"]
+        assert len(scenario.flags) == 2
+        assert len(scenario.credentials) == 4  # 2 steps × 2 (username + password)
+
+    def test_explicit_chain_unknown_module(self):
+        engine = self._engine()
+        config = ScenarioConfig(explicit_chain=["FAKE-MODULE"])
+        import pytest
+        with pytest.raises(ValueError, match="Unknown module 'FAKE-MODULE'"):
+            engine.generate(config)
+
+    def test_explicit_chain_bad_entry_point(self):
+        engine = self._engine()
+        # CMP-IMDS requires vm_shell, not network_access — can't be first
+        config = ScenarioConfig(explicit_chain=["CMP-IMDS", "STR-KEYVAULT-POLICY"])
+        import pytest
+        with pytest.raises(ValueError, match="not an entry point"):
+            engine.generate(config)
+
+    def test_explicit_chain_incompatible_link(self):
+        engine = self._engine()
+        # NET-MGMT-EXPOSED provides vm_shell, STR-KEYVAULT-POLICY requires managed_identity_token
+        config = ScenarioConfig(
+            explicit_chain=["NET-MGMT-EXPOSED", "STR-KEYVAULT-POLICY"],
+        )
+        import pytest
+        with pytest.raises(ValueError, match="Invalid chain link"):
+            engine.generate(config)

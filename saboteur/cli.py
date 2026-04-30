@@ -78,6 +78,7 @@ def _has_explicit_flags(ctx: typer.Context) -> bool:
 def generate(
     ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
+    chain: Optional[str] = typer.Option(None, "--chain", help="Explicit chain of module IDs (comma-separated, e.g. NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories: web,identity,compute,storage,networking"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed for reproducibility"),
@@ -96,14 +97,17 @@ def generate(
         seed = cfg["seed"]
         output_file = cfg["output_file"]
         verbose = cfg["verbose"]
+        chain_ids = None
     else:
         cat_list = _parse_categories(categories)
+        chain_ids = _parse_chain(chain)
 
     config = ScenarioConfig(
-        chain_length=chain_length,
+        chain_length=len(chain_ids) if chain_ids else chain_length,
         categories=cat_list,
         region=region,
         seed=seed,
+        explicit_chain=chain_ids,
     )
 
     engine = _load_engine(seed)
@@ -139,6 +143,7 @@ def generate(
 def deploy(
     ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
+    chain: Optional[str] = typer.Option(None, "--chain", help="Explicit chain of module IDs (comma-separated, e.g. NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
@@ -158,8 +163,10 @@ def deploy(
         seed = cfg["seed"]
         image = cfg["image"] or None
         verbose = cfg["verbose"]
+        chain_ids = None
     else:
         cat_list = _parse_categories(categories)
+        chain_ids = _parse_chain(chain)
 
     sub_id = subscription_id or get_subscription_id()
     if not sub_id:
@@ -167,11 +174,12 @@ def deploy(
         raise typer.Exit(1)
 
     config = ScenarioConfig(
-        chain_length=chain_length,
+        chain_length=len(chain_ids) if chain_ids else chain_length,
         categories=cat_list,
         region=region,
         subscription_id=sub_id,
         seed=seed,
+        explicit_chain=chain_ids,
     )
 
     engine = _load_engine(seed)
@@ -1019,3 +1027,9 @@ def _parse_categories(categories: str | None) -> list[ModuleCategory] | None:
         except ValueError:
             print_warning(f"Unknown category '{c}', skipping")
     return result or None
+
+
+def _parse_chain(chain: str | None) -> list[str] | None:
+    if not chain:
+        return None
+    return [mid.strip().upper() for mid in chain.split(",") if mid.strip()]
