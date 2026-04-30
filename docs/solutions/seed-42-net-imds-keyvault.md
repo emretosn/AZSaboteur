@@ -99,12 +99,7 @@ cat /opt/azsaboteur/flag.txt
 AZS_F{...}
 ```
 
-**Validate:**
-
-```bash
-saboteur validate 'AZS_F{...}'
-# ✓ Correct! Step 1/3 completed.
-```
+**Validate:** Run `saboteur validate` and enter the flag in the interactive menu.
 
 ### 1.4 Collect breadcrumbs for the next step
 
@@ -164,12 +159,7 @@ cat /opt/azsaboteur/flag.txt
 AZS_F{...}
 ```
 
-**Validate:**
-
-```bash
-saboteur validate 'AZS_F{...}'
-# ✓ Correct! Step 2/3 completed.
-```
+**Validate:** Run `saboteur validate` and enter the flag in the interactive menu.
 
 ### 2.3 Read the deployment notes
 
@@ -285,12 +275,7 @@ The `value` field contains the final flag:
 AZS_F{...}
 ```
 
-**Validate:**
-
-```bash
-saboteur validate 'AZS_F{...}'
-# ✓ Correct! Final flag — all 3 steps completed!
-```
+**Validate:** Run `saboteur validate` and enter the flag in the interactive menu.
 
 ---
 

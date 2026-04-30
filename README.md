@@ -67,10 +67,11 @@ uv run saboteur destroy
 | `saboteur generate` | Dry-run: generate a scenario without deploying |
 | `saboteur deploy` | Generate and deploy a scenario to Azure |
 | `saboteur connect` | Reconnect to the Kali box (starts VM, fixes NSG/xRDP if needed) |
+| `saboteur credentials` | Print Kali box connection credentials |
 | `saboteur destroy` | Tear down a deployed scenario |
 | `saboteur reprovision` | Re-run Ansible on an existing deployment (~1-2 min) |
 | `saboteur status` | Show all tracked deployments |
-| `saboteur validate <FLAG>` | Check if a flag string is correct |
+| `saboteur validate` | Interactive flag submission and progress tracker |
 | `saboteur list-modules` | Show available vulnerability modules |
 | `saboteur clean` | Reset local state when destroy fails |
 

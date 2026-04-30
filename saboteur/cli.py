@@ -33,6 +33,8 @@ from saboteur.utils.output import (
     print_chain_table,
     print_chain_verbose,
     print_error,
+    print_flag_panel,
+    print_flag_status,
     print_info,
     print_mission_briefing,
     print_success,
@@ -378,6 +380,7 @@ def destroy(
 
     if tf.destroy():
         state.remove(instance)
+        FlagValidator.clear_state(instance)
         print_success(f"Deployment {instance} destroyed")
     else:
         print_error(
@@ -452,12 +455,14 @@ def clean(
                     print_error(f"Failed to remove: {resource}")
 
         tf._delete_workspace()
+        FlagValidator.clear_state(dep.scenario_id)
         state.remove(dep.scenario_id)
 
     # Only clean chain.tf when removing all deployments
     if not instance:
         tf_default = TerraformRunner()
         tf_default.clean_chain_tf()
+        FlagValidator.clear_all_state()
 
     print_success(
         f"Local cleanup complete — removed {total_removed} resource(s) from Terraform state, "
@@ -732,29 +737,108 @@ def credentials(
 
 @app.command()
 def validate(
-    flag: str = typer.Argument(..., help="Flag string to validate"),
+    ctx: typer.Context,
     instance: Optional[str] = typer.Option(None, "--instance", "-i", help="Scenario ID"),
 ) -> None:
-    """Check if a flag string is correct."""
+    """Interactive flag validation menu.
+
+    Submit captured flags and track your progress through the attack chain.
+    Flags can be entered in any order. Progress is saved between sessions.
+    """
+    if not sys.stdin.isatty():
+        print_error("saboteur validate requires an interactive terminal.")
+        raise typer.Exit(1)
+
     state = StateManager()
 
+    # Always prompt for scenario selection first
     if instance:
         deployment = state.get(instance)
         if not deployment:
             print_error(f"No deployment found: {instance}")
             raise typer.Exit(1)
-        deployments = [deployment]
     else:
         deployments = state.active
-
-    for dep in deployments:
-        validator = FlagValidator(dep.flags)
-        result = validator.validate(flag)
-        if result.correct:
-            print_success(result.message)
+        if not deployments:
+            print_info("No active deployments to validate")
             return
+        if len(deployments) == 1:
+            deployment = deployments[0]
+        else:
+            from saboteur.utils.prompts import prompt_select_instance
+            cfg = prompt_select_instance("Select deployment to validate:")
+            sid = cfg["instance"]
+            if not sid:
+                return
+            deployment = state.get(sid)
+            if not deployment:
+                return
 
-    print_error("Incorrect flag. Keep trying!")
+    if not deployment.flags:
+        print_info("This scenario has no flags to validate.")
+        return
+
+    validator = FlagValidator(deployment.flags, scenario_id=deployment.scenario_id)
+    total = len(deployment.flags)
+
+    message = ""
+    if validator.solved:
+        message = f"[dim]Restored progress: {validator.progress}[/dim]"
+
+    if validator.is_complete:
+        print_flag_panel(total, validator.solved)
+        out.print(
+            f"\n[bold green]🎉 All {total} flags already captured "
+            f"— mission complete![/bold green]\n"
+        )
+        return
+
+    # Track how many lines the panel + prompt occupy so we can overwrite
+    panel_lines = print_flag_panel(total, validator.solved, message)
+
+    while not validator.is_complete:
+        try:
+            submitted = out.input(
+                "[bold cyan]Enter flag (or 'q' to quit):[/bold cyan] "
+            )
+        except (KeyboardInterrupt, EOFError):
+            out.print()
+            break
+
+        submitted = submitted.strip()
+        if submitted.lower() == "q":
+            break
+
+        if not submitted:
+            # Erase the empty prompt line and reprint panel in place
+            panel_lines = print_flag_panel(
+                total, validator.solved, message, prev_lines=panel_lines + 1,
+            )
+            continue
+
+        result = validator.validate(submitted)
+        if result.correct and result.already_solved:
+            message = f"[bold yellow]⚠ {result.message}[/bold yellow]"
+        elif result.correct:
+            message = f"[bold green]✓ {result.message}[/bold green]"
+        else:
+            message = f"[bold red]✗ {result.message}[/bold red]"
+
+        # +1 for the input/prompt line we need to overwrite too
+        panel_lines = print_flag_panel(
+            total, validator.solved, message, prev_lines=panel_lines + 1,
+        )
+
+    # Final output
+    if validator.is_complete:
+        # Overwrite the last panel + prompt
+        print_flag_panel(total, validator.solved, prev_lines=panel_lines + 1)
+        out.print(
+            f"\n[bold green]🎉 Congratulations! All {total} "
+            f"flags captured — mission complete![/bold green]\n"
+        )
+    else:
+        out.print(f"\n{validator.progress}\n")
 
 
 # ---------------------------------------------------------------------------
