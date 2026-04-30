@@ -109,7 +109,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - echo 'exec dbus-launch --exit-with-session xfce4-session' >> /etc/xrdp/startwm.sh
       - systemctl enable xrdp
       - systemctl restart xrdp
-      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat || true
+      - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat firefox-esr || true
       - mkdir -p /home/${var.admin_username}/Desktop
       - |
         cat > /home/${var.admin_username}/Desktop/README.txt << 'MOTD'

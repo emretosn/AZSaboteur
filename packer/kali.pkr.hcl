@@ -79,7 +79,7 @@ build {
       "sudo apt-get install -y -qq xrdp xorgxrdp xfce4 xfce4-goodies dbus-x11",
 
       "echo '=== Installing Kali top 10 tools ==='",
-      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat",
+      "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat firefox-esr",
 
       "echo '=== Configuring xRDP ==='",
       "sudo ln -sf /lib/systemd/system/xrdp.service /etc/systemd/system/multi-user.target.wants/xrdp.service",
