@@ -138,7 +138,7 @@ resource "azurerm_linux_virtual_machine" "this" {
         Good luck, operator.
         MOTD
       - chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/Desktop/README.txt
-  EOF
+    EOF
   )
 
   os_disk {

@@ -60,7 +60,7 @@ resource "azurerm_linux_virtual_machine" "this" {
     echo '${var.flag}' > /opt/azsaboteur/flag.txt
     chmod 600 /opt/azsaboteur/flag.txt
     apt-get update -qq && apt-get install -y -qq python3 python3-pip
-  CLOUD
+    CLOUD
   )
 
   tags = {

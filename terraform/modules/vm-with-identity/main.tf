@@ -55,9 +55,8 @@ resource "azurerm_linux_virtual_machine" "this" {
     mkdir -p /opt/azsaboteur
     echo '${var.flag}' > /opt/azsaboteur/flag.txt
     chmod 600 /opt/azsaboteur/flag.txt
-  CLOUD
+    CLOUD
   )
-
   tags = {
     project  = "azsaboteur"
     scenario = var.scenario_id

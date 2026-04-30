@@ -226,7 +226,7 @@ def deploy(
             # Kali marketplace images fail intermittently on some Azure subscriptions
             # (managed environments, marketplace purchase restrictions, propagation
             # delays for plan acceptance). Retry with an Ubuntu base image — the
-            # cloud-init installs the same tools (nmap, hydra, seclists, etc.).
+            # cloud-init installs the same tools (nmap, hydra, etc.).
             print_warning(
                 "Kali marketplace deployment failed — this is usually caused by Azure\n"
                 "marketplace purchase restrictions on your subscription. Retrying with\n"
@@ -314,7 +314,7 @@ def deploy(
         print_warning(
             "The attack box is running Ubuntu instead of Kali Linux because the Kali\n"
             "marketplace image could not be purchased on this Azure subscription. All\n"
-            "the same pentesting tools (nmap, hydra, seclists, etc.) are being installed\n"
+            "the same pentesting tools (nmap, hydra, etc.) are being installed\n"
             "via cloud-init. To use Kali natively, build a golden image with:\n"
             "  cd packer && packer build kali.pkr.hcl\n"
             "  saboteur deploy --image <image_resource_id>"

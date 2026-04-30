@@ -127,8 +127,9 @@ TOOLS AVAILABLE
   nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
   metasploit, burpsuite, responder, aircrack-ng
 
-WORDLISTS (via SecLists)
-  /usr/share/seclists/
+TIPS
+  Look for exposed web services, view page source for leaked credentials.
+  Use discovered creds to SSH into targets and pivot through the chain.
 
 Good luck, operator.
 MOTD
