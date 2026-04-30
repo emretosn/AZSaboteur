@@ -111,3 +111,26 @@ class TestScenarioEngine:
         import pytest
         with pytest.raises(ValueError, match="Invalid chain link"):
             engine.generate(config)
+
+    def test_exclude_modules(self):
+        engine = self._engine(seed=42)
+        config = ScenarioConfig(
+            chain_length=3,
+            seed=42,
+            exclude=["CMP-IMDS"],
+        )
+        scenario = engine.generate(config)
+        chain_ids = [scenario.graph.get_module(n).id for n in scenario.graph.topo_order()]
+        assert "CMP-IMDS" not in chain_ids
+
+    def test_exclude_mcap(self):
+        from saboteur.scenario.engine import MCAP_BLOCKED
+        engine = self._engine(seed=99)
+        config = ScenarioConfig(
+            chain_length=3,
+            seed=99,
+            exclude=list(MCAP_BLOCKED),
+        )
+        scenario = engine.generate(config)
+        chain_ids = {scenario.graph.get_module(n).id for n in scenario.graph.topo_order()}
+        assert chain_ids.isdisjoint(set(MCAP_BLOCKED))

@@ -54,8 +54,20 @@ def prompt_deploy_config() -> dict[str, Any]:
             choices=all_cats,
         ).execute()
         config["categories"] = [ModuleCategory(c) for c in selected] if selected else None
+
+        # --- MCAP exclusion ---
+        mcap_compat = inquirer.confirm(
+            message="Managed (MCAP) subscription?",
+            default=False,
+        ).execute()
+        if mcap_compat:
+            from saboteur.scenario.engine import MCAP_BLOCKED
+            config["exclude"] = list(MCAP_BLOCKED)
+        else:
+            config["exclude"] = None
     else:
         config["categories"] = None
+        config["exclude"] = None
 
     # --- Region ---
     config["region"] = inquirer.select(
@@ -129,8 +141,20 @@ def prompt_generate_config() -> dict[str, Any]:
             choices=all_cats,
         ).execute()
         config["categories"] = [ModuleCategory(c) for c in selected] if selected else None
+
+        # --- MCAP exclusion ---
+        mcap_compat = inquirer.confirm(
+            message="Managed (MCAP) subscription?",
+            default=False,
+        ).execute()
+        if mcap_compat:
+            from saboteur.scenario.engine import MCAP_BLOCKED
+            config["exclude"] = list(MCAP_BLOCKED)
+        else:
+            config["exclude"] = None
     else:
         config["categories"] = None
+        config["exclude"] = None
 
     # --- Region ---
     config["region"] = inquirer.select(

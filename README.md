@@ -174,7 +174,17 @@ Exploit an SSRF vulnerability to steal a managed identity token from IMDS, then 
 NET-MGMT-EXPOSED → CMP-IMDS → STR-KEYVAULT-POLICY
 ```
 
-Discover an exposed SSH port, log in with weak credentials to get a shell, query IMDS for a managed identity token, then pillage the Key Vault.
+Discover an exposed SSH port, find leaked credentials on a deployment portal, get a shell, query IMDS for a managed identity token, then pillage the Key Vault.
+📖 [Solution walkthrough](docs/solutions/net-imds-keyvault.md)
+
+### Medium — MCAP-compatible (3 steps)
+
+```
+WEB-SQLI → CMP-FUNC-ENV → CMP-AUTOMATION
+```
+
+Exploit SQL injection to dump credentials from a database, read leaked service principal secrets from a Function App's environment variables, then discover the flag in an Automation Account runbook.
+📖 [Solution walkthrough](docs/solutions/sqli-funcenv-automation.md)
 
 ### Long (9 steps)
 

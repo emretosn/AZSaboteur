@@ -22,6 +22,17 @@ class ScenarioConfig:
     subscription_id: str = ""
     seed: int | None = None
     explicit_chain: list[str] | None = None
+    exclude: list[str] | None = None
+
+
+# Modules that cannot be deployed on Microsoft-managed (MCAP) subscriptions
+# due to enforced tenant policies (no shared key access, no Entra app creation).
+MCAP_BLOCKED = [
+    "IAM-OVERPERM-SP",
+    "IAM-APPREG-SECRET",
+    "STR-SAS-OVERPERM",
+    "STR-COSMOSDB-KEY",
+]
 
 
 @dataclass
@@ -124,7 +135,12 @@ class ScenarioEngine:
         if config.chain_length == 0:
             return []
 
-        entry_points = self.catalog.entry_points(categories=config.categories)
+        excluded = set(config.exclude or [])
+
+        entry_points = [
+            m for m in self.catalog.entry_points(categories=config.categories)
+            if m.id not in excluded
+        ]
         if not entry_points:
             raise ValueError("No entry point modules available for the given filters.")
 
@@ -132,7 +148,7 @@ class ScenarioEngine:
         self.rng.shuffle(entry_points)
 
         for entry in entry_points:
-            result = self._extend_chain([entry], config)
+            result = self._extend_chain([entry], config, excluded)
             if len(result) >= config.chain_length:
                 return result
 
@@ -177,16 +193,19 @@ class ScenarioEngine:
         return modules
 
     def _extend_chain(
-        self, chain: list[VulnModule], config: ScenarioConfig
+        self, chain: list[VulnModule], config: ScenarioConfig,
+        excluded: set[str] | None = None,
     ) -> list[VulnModule]:
         """Recursively extend the chain, backtracking on dead ends."""
         if len(chain) >= config.chain_length:
             return chain
 
+        excluded = excluded or set()
         current = chain[-1]
         used_ids = {c.id for c in chain}
         candidates = [
-            m for m in self.catalog.followers(current) if m.id not in used_ids
+            m for m in self.catalog.followers(current)
+            if m.id not in used_ids and m.id not in excluded
         ]
 
         if config.categories:
@@ -196,7 +215,7 @@ class ScenarioEngine:
         self.rng.shuffle(candidates)
 
         for candidate in candidates:
-            result = self._extend_chain(chain + [candidate], config)
+            result = self._extend_chain(chain + [candidate], config, excluded)
             if len(result) >= config.chain_length:
                 return result
 

@@ -79,6 +79,7 @@ def generate(
     ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     chain: Optional[str] = typer.Option(None, "--chain", help="Explicit chain of module IDs (comma-separated, e.g. NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY)"),
+    exclude: Optional[str] = typer.Option(None, "--exclude", "-x", help="Exclude module IDs from random generation (comma-separated, or 'mcap' to exclude all MCAP-incompatible modules)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories: web,identity,compute,storage,networking"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed for reproducibility"),
@@ -98,9 +99,11 @@ def generate(
         output_file = cfg["output_file"]
         verbose = cfg["verbose"]
         chain_ids = None
+        exclude_ids = cfg.get("exclude")
     else:
         cat_list = _parse_categories(categories)
         chain_ids = _parse_chain(chain)
+        exclude_ids = _parse_exclude(exclude)
 
     config = ScenarioConfig(
         chain_length=len(chain_ids) if chain_ids else chain_length,
@@ -108,6 +111,7 @@ def generate(
         region=region,
         seed=seed,
         explicit_chain=chain_ids,
+        exclude=exclude_ids,
     )
 
     engine = _load_engine(seed)
@@ -144,6 +148,7 @@ def deploy(
     ctx: typer.Context,
     chain_length: int = typer.Option(3, "--chain-length", "-n", min=0, help="Number of steps in the attack chain (0 = infra only)"),
     chain: Optional[str] = typer.Option(None, "--chain", help="Explicit chain of module IDs (comma-separated, e.g. NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY)"),
+    exclude: Optional[str] = typer.Option(None, "--exclude", "-x", help="Exclude module IDs from random generation (comma-separated, or 'mcap' to exclude all MCAP-incompatible modules)"),
     categories: Optional[str] = typer.Option(None, "--categories", "-c", help="Comma-separated categories"),
     region: str = typer.Option("westeurope", "--region", "-r", help="Azure region"),
     seed: Optional[int] = typer.Option(None, "--seed", "-s", help="Random seed"),
@@ -164,9 +169,11 @@ def deploy(
         image = cfg["image"] or None
         verbose = cfg["verbose"]
         chain_ids = None
+        exclude_ids = cfg.get("exclude")
     else:
         cat_list = _parse_categories(categories)
         chain_ids = _parse_chain(chain)
+        exclude_ids = _parse_exclude(exclude)
 
     sub_id = subscription_id or get_subscription_id()
     if not sub_id:
@@ -180,6 +187,7 @@ def deploy(
         subscription_id=sub_id,
         seed=seed,
         explicit_chain=chain_ids,
+        exclude=exclude_ids,
     )
 
     engine = _load_engine(seed)
@@ -1033,3 +1041,12 @@ def _parse_chain(chain: str | None) -> list[str] | None:
     if not chain:
         return None
     return [mid.strip().upper() for mid in chain.split(",") if mid.strip()]
+
+
+def _parse_exclude(exclude: str | None) -> list[str] | None:
+    if not exclude:
+        return None
+    from saboteur.scenario.engine import MCAP_BLOCKED
+    if exclude.strip().lower() == "mcap":
+        return list(MCAP_BLOCKED)
+    return [mid.strip().upper() for mid in exclude.split(",") if mid.strip()]

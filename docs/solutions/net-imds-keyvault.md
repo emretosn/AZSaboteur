@@ -1,12 +1,9 @@
 # Solution Walkthrough: NET-MGMT-EXPOSED → CMP-IMDS → STR-KEYVAULT-POLICY
 
-> **Seed:** `42`
 > **Chain:** `NET-MGMT-EXPOSED → CMP-IMDS → STR-KEYVAULT-POLICY`
 >
-> This walkthrough uses a scenario generated with `--seed 42`. The chain
-> order and usernames are deterministic for this seed. Passwords, flags,
-> and resource names are randomly generated each deployment — your values
-> will differ from the placeholders shown below.
+> Passwords, flags, and resource names are randomly generated each
+> deployment — your values will differ from the placeholders shown below.
 
 ---
 
@@ -15,7 +12,7 @@
 Deploy the scenario:
 
 ```bash
-uv run saboteur deploy --seed 42 --chain-length 3
+uv run saboteur deploy --chain NET-MGMT-EXPOSED,CMP-IMDS,STR-KEYVAULT-POLICY
 ```
 
 After deployment, you receive the Kali box connection info:
