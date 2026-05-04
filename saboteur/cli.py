@@ -454,7 +454,7 @@ def clean(
     total_removed = 0
     for dep in deployments:
         tf = TerraformRunner(scenario_id=dep.scenario_id)
-        if not tf.init():
+        if not tf.init(upgrade=False):
             print_error(f"Failed to init workspace for {dep.scenario_id}")
             continue
 
@@ -564,10 +564,9 @@ def connect(
 
     # Read Terraform outputs for IP / resource names
     tf = TerraformRunner(scenario_id=instance)
-    if not tf.init():
+    if not tf.init(upgrade=False):
         raise typer.Exit(1)
     tf_outputs = tf.output()
-
     if not tf_outputs:
         print_error("Could not read Terraform outputs — is the infrastructure still deployed?")
         raise typer.Exit(1)
@@ -737,7 +736,7 @@ def credentials(
         raise typer.Exit(1)
 
     tf = TerraformRunner(scenario_id=instance)
-    if not tf.init():
+    if not tf.init(upgrade=False):
         raise typer.Exit(1)
     tf_outputs = tf.output()
 

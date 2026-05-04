@@ -175,13 +175,16 @@ class TerraformRunner:
             print_warning(f"Could not delete workspace '{self.scenario_id}' (may already be removed)")
         return True
 
-    def init(self) -> bool:
+    def init(self, upgrade: bool = True) -> bool:
+        init_args = ["init", "-input=false", "-no-color"]
+        if upgrade:
+            init_args.append("-upgrade")
         if self.verbose:
             print_info("Running: terraform init")
-            result = self._run(["init", "-input=false", "-no-color", "-upgrade"])
+            result = self._run(init_args)
         else:
             with console.status("[bold blue]Initializing Terraform...", spinner="dots", spinner_style="blue"):
-                result = self._run(["init", "-input=false", "-no-color", "-upgrade"])
+                result = self._run(init_args)
         if result.returncode != 0:
             print_error(f"Terraform init failed:\n{result.stderr}")
             return False
