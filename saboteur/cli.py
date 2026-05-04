@@ -605,12 +605,16 @@ def connect(
     if not ensure_vm_running(rg_name, vm_name):
         raise typer.Exit(1)
 
-    # Step 2: Ensure NSG rules allow RDP/SSH inbound
+    # Step 2: Re-create the user account (Azure may wipe it after deallocation)
+    print_info("Ensuring Kali user account exists...")
+    _ensure_vm_user(rg_name, vm_name, kali_user, kali_pass)
+
+    # Step 3: Ensure NSG rules allow RDP/SSH inbound
     print_info("Checking NSG rules...")
     if not ensure_nsg_rules(rg_name, nsg_name):
         print_warning("Could not verify NSG rules — connection may fail")
 
-    # Step 3: Check RDP port, restart xRDP if needed
+    # Step 4: Check RDP port, restart xRDP if needed
     if not check_port(kali_ip, 3389):
         print_warning("RDP port not reachable — attempting recovery...")
         restart_xrdp(rg_name, vm_name)
@@ -621,7 +625,7 @@ def connect(
             )
             raise typer.Exit(1)
 
-    # Step 4: Fix startwm.sh if dbus-launch is missing (xfce4 crashes without it)
+    # Step 5: Fix startwm.sh if dbus-launch is missing (xfce4 crashes without it)
     _ensure_dbus_launch(rg_name, vm_name)
 
     print_success("Kali box is ready!")
@@ -656,6 +660,34 @@ def _ensure_dbus_launch(resource_group: str, vm_name: str) -> None:
         "'s|^exec xfce4-session|exec dbus-launch --exit-with-session xfce4-session|' "
         "/etc/xrdp/startwm.sh && sudo systemctl restart xrdp",
     )
+
+
+def _ensure_vm_user(resource_group: str, vm_name: str, username: str, password: str) -> None:
+    """Re-create the VM user account if it was wiped after deallocation.
+
+    Azure's waagent may remove user accounts when a golden-image VM is
+    stopped/deallocated and restarted.  ``az vm user update`` creates the
+    user if missing, or resets the password if it already exists.
+    """
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "az", "vm", "user", "update",
+            "--resource-group", resource_group,
+            "--name", vm_name,
+            "--username", username,
+            "--password", password,
+            "--no-wait",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print_warning(
+            f"Could not reset VM user account — login may fail if the VM was deallocated.\n"
+            f"  {result.stderr.strip()}"
+        )
 
 
 # ---------------------------------------------------------------------------

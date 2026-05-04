@@ -81,6 +81,9 @@ build {
       "echo '=== Installing Kali top 10 tools ==='",
       "sudo apt-get install -y -qq nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat firefox-esr",
 
+      "echo '=== Installing Azure CLI ==='",
+      "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash",
+
       "echo '=== Configuring xRDP ==='",
       "sudo ln -sf /lib/systemd/system/xrdp.service /etc/systemd/system/multi-user.target.wants/xrdp.service",
 
@@ -125,11 +128,12 @@ START HERE
 
 TOOLS AVAILABLE
   nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
-  metasploit, burpsuite, responder, aircrack-ng
+  metasploit, burpsuite, responder, aircrack-ng, firefox-esr, az (Azure CLI)
 
 TIPS
   Look for exposed web services, view page source for leaked credentials.
   Use discovered creds to SSH into targets and pivot through the chain.
+  Use 'az' to interact with Azure resources once you have credentials.
 
 Good luck, operator.
 MOTD

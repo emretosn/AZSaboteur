@@ -110,6 +110,7 @@ resource "azurerm_linux_virtual_machine" "this" {
       - systemctl enable xrdp
       - systemctl restart xrdp
       - apt-get install -y -qq --fix-broken nmap metasploit-framework sqlmap john hydra nikto burpsuite aircrack-ng crackmapexec responder hashcat firefox-esr || true
+      - curl -sL https://aka.ms/InstallAzureCLIDeb | bash || true
       - mkdir -p /home/${var.admin_username}/Desktop
       - |
         cat > /home/${var.admin_username}/Desktop/README.txt << 'MOTD'
@@ -129,11 +130,12 @@ resource "azurerm_linux_virtual_machine" "this" {
 
         TOOLS AVAILABLE
           nmap, hydra, john, hashcat, sqlmap, nikto, crackmapexec,
-          metasploit, burpsuite, responder, aircrack-ng
+          metasploit, burpsuite, responder, aircrack-ng, firefox-esr, az (Azure CLI)
 
         TIPS
           Look for exposed web services, view page source for leaked credentials.
           Use discovered creds to SSH into targets and pivot through the chain.
+          Use 'az' to interact with Azure resources once you have credentials.
 
         Good luck, operator.
         MOTD
